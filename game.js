@@ -84,344 +84,74 @@ function initDOM() {
         window.location.href = 'index.html';
     }
     
-    createHeadphoneCheckModal();
-}
-
-function createHeadphoneCheckModal() {
-    if (document.getElementById('headphoneCheckModal')) return;
-    
-    const modal = document.createElement('div');
-    modal.id = 'headphoneCheckModal';
-    modal.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.95);
-        display: none;
-        justify-content: center;
-        align-items: center;
-        z-index: 10000;
-        font-family: Arial, sans-serif;
-    `;
-    
-    modal.innerHTML = `
-        <div style="
-            background: linear-gradient(135deg, #1a237e 0%, #311b92 100%);
-            padding: 40px;
-            border-radius: 20px;
-            max-width: 600px;
-            text-align: center;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.7);
-            color: white;
-            margin: 20px;
-            border: 2px solid #3949ab;
-        ">
-            <div style="font-size: 5rem; margin-bottom: 20px; animation: pulse 2s infinite;">🎧</div>
-            <h2 style="margin: 0 0 20px 0; font-size: 2.5rem; color: #bb86fc;">Voice Chat Setup</h2>
-            
-            <div style="
-                background: rgba(255, 255, 255, 0.1);
-                border-radius: 15px;
-                padding: 25px;
-                margin-bottom: 30px;
-                text-align: center;
-                backdrop-filter: blur(10px);
-                border: 1px solid rgba(255, 255, 255, 0.2);
-            ">
-                <h3 style="margin: 0 0 15px 0; color: #bb86fc; font-size: 1.5rem;">⚠️ Ważna informacja!</h3>
-                <p style="margin: 0; line-height: 1.6; font-size: 1.2rem; color: #e1e1e1;">
-                    Aby uniknąć echa i zapewnić najlepszą jakość rozmowy, 
-                    <strong style="color: #bb86fc;">ZALECAMY UŻYCIE SŁUCHAWEK</strong>.
-                </p>
-            </div>
-            
-            <div style="display: flex; flex-direction: column; gap: 20px; margin-bottom: 40px;">
-                <div style="display: flex; align-items: center; gap: 20px; background: rgba(76, 175, 80, 0.2); padding: 20px; border-radius: 15px; border-left: 5px solid #4CAF50;">
-                    <div style="font-size: 2.5rem;">✅</div>
-                    <div style="text-align: left; flex: 1;">
-                        <div style="font-weight: bold; font-size: 1.3rem; color: #4CAF50; margin-bottom: 5px;">Z słuchawkami:</div>
-                        <div style="font-size: 1rem; color: #c8e6c9;">Czysty dźwięk • Bez echa • Najlepsze doświadczenie</div>
-                    </div>
-                </div>
-                
-                <div style="display: flex; align-items: center; gap: 20px; background: rgba(255, 152, 0, 0.2); padding: 20px; border-radius: 15px; border-left: 5px solid #FF9800;">
-                    <div style="font-size: 2.5rem;">⚠️</div>
-                    <div style="text-align: left; flex: 1;">
-                        <div style="font-weight: bold; font-size: 1.3rem; color: #FF9800; margin-bottom: 5px;">Z głośnikami:</div>
-                        <div style="font-size: 1rem; color: #ffe0b2;">Może wystąpić echo • Inni mogą Cię słyszeć • Gorsza jakość</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div style="display: flex; flex-direction: column; gap: 15px;">
-                <button id="modalHeadphoneYes" style="
-                    background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
-                    color: white;
-                    border: none;
-                    padding: 25px;
-                    border-radius: 15px;
-                    font-size: 1.4rem;
-                    cursor: pointer;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 20px;
-                    transition: all 0.3s;
-                    font-weight: bold;
-                    box-shadow: 0 10px 20px rgba(76, 175, 80, 0.3);
-                ">
-                    <span style="font-size: 2rem;">🎧</span>
-                    <span>TAK, używam słuchawek</span>
-                </button>
-                
-                <button id="modalHeadphoneNo" style="
-                    background: linear-gradient(135deg, #FF9800 0%, #EF6C00 100%);
-                    color: white;
-                    border: none;
-                    padding: 25px;
-                    border-radius: 15px;
-                    font-size: 1.4rem;
-                    cursor: pointer;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 20px;
-                    transition: all 0.3s;
-                    font-weight: bold;
-                    box-shadow: 0 10px 20px rgba(255, 152, 0, 0.3);
-                ">
-                    <span style="font-size: 2rem;">🔊</span>
-                    <span>NIE, używam głośników</span>
-                </button>
-            </div>
-            
-            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.2);">
-                <p style="margin: 0; font-size: 1rem; color: #bb86fc;">
-                    <i class="fas fa-info-circle"></i> 
-                    Możesz zmienić to ustawienie w trakcie gry
-                </p>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    const headphonesConfirmed = localStorage.getItem('headphonesConfirmed');
-    if (headphonesConfirmed === null && playerData.allowVoice !== false) {
-        setTimeout(() => {
-            modal.style.display = 'flex';
-        }, 1000);
-    } else {
-        isUsingHeadphones = headphonesConfirmed === 'true';
-        if (!isUsingHeadphones && playerData.allowVoice !== false) {
-            setTimeout(showHeadphoneWarning, 1500);
-        }
-    }
-    
-    document.getElementById('modalHeadphoneYes').addEventListener('click', () => {
-        isUsingHeadphones = true;
-        localStorage.setItem('headphonesConfirmed', 'true');
-        modal.style.display = 'none';
-        updateVoiceStatus('ready');
-        isVoiceReady = true;
+    // AUTOMATYCZNY TEST MIKROFONU PO WEJŚCIU DO GRY
+    setTimeout(async () => {
+        console.log("🔄 Automatyczne uruchamianie voice chatu w grze...");
         
-        addChatMessage({
-            type: 'chat',
-            sender: 'SYSTEM',
-            message: '✅ Voice chat gotowy! (Tryb słuchawek) Naciśnij V aby mówić',
-            color: '#4CAF50',
-            timestamp: Date.now()
-        });
-    });
-    
-    document.getElementById('modalHeadphoneNo').addEventListener('click', () => {
-        isUsingHeadphones = false;
-        localStorage.setItem('headphonesConfirmed', 'false');
-        modal.style.display = 'none';
-        updateVoiceStatus('ready');
-        isVoiceReady = true;
+        // Pokazuj komunikat o ładowaniu voice
+        updateVoiceStatus('initializing');
         
-        addChatMessage({
-            type: 'chat',
-            sender: 'SYSTEM',
-            message: '✅ Voice chat gotowy! (Tryb głośników) Naciśnij V aby mówić',
-            color: '#4CAF50',
-            timestamp: Date.now()
-        });
-        
-        showHeadphoneWarning();
-    });
-    
-    // Hover efekty
-    const buttons = modal.querySelectorAll('button');
-    buttons.forEach(btn => {
-        btn.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-5px) scale(1.02)';
-            this.style.boxShadow = '0 15px 30px rgba(0,0,0,0.4)';
-        });
-        
-        btn.addEventListener('mouseleave', function() {
-            this.style.transform = 'translateY(0) scale(1)';
-            this.style.boxShadow = '0 10px 20px rgba(0,0,0,0.3)';
-        });
-    });
-}
-
-function showHeadphoneWarning() {
-    const warning = document.createElement('div');
-    warning.id = 'headphoneWarning';
-    warning.style.cssText = `
-        position: fixed;
-        bottom: 100px;
-        right: 20px;
-        background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
-        color: white;
-        border-radius: 15px;
-        padding: 25px;
-        max-width: 400px;
-        z-index: 9999;
-        display: block;
-        animation: slideInUp 0.5s ease-out;
-        box-shadow: 0 15px 35px rgba(0,0,0,0.4);
-        border-left: 5px solid #FF5722;
-        font-family: Arial, sans-serif;
-    `;
-    
-    warning.innerHTML = `
-        <div style="display: flex; align-items: flex-start; gap: 20px; margin-bottom: 20px;">
-            <div style="font-size: 3rem; flex-shrink: 0;">⚠️</div>
-            <div>
-                <h4 style="margin: 0; font-size: 1.4rem; color: #fff; margin-bottom: 10px;">Uwaga!</h4>
-                <p style="margin: 0; font-size: 1.1rem; color: #ffe0b2; line-height: 1.5;">
-                    Używasz głośników - może wystąpić echo. 
-                    <strong style="color: white;">Inni gracze mogą słyszeć swój głos z twoich głośników.</strong>
-                </p>
-            </div>
-        </div>
-        <div style="display: flex; gap: 15px;">
-            <button id="closeHeadphoneWarning" style="
-                flex: 1;
-                background: rgba(255, 255, 255, 0.2);
-                color: white;
-                border: 2px solid rgba(255, 255, 255, 0.3);
-                padding: 15px;
-                border-radius: 10px;
-                cursor: pointer;
-                font-size: 1.1rem;
-                transition: all 0.3s;
-                font-weight: bold;
-            ">
-                Rozumiem
-            </button>
-            <button id="switchToHeadphonesBtn" style="
-                flex: 1;
-                background: white;
-                color: #FF9800;
-                border: none;
-                padding: 15px;
-                border-radius: 10px;
-                cursor: pointer;
-                font-weight: bold;
-                font-size: 1.1rem;
-                transition: all 0.3s;
-                box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-            ">
-                🎧 Użyj słuchawek
-            </button>
-        </div>
-    `;
-    
-    document.body.appendChild(warning);
-    
-    document.getElementById('closeHeadphoneWarning').addEventListener('click', () => {
-        warning.style.animation = 'slideOutDown 0.5s ease-out';
-        setTimeout(() => warning.remove(), 500);
-    });
-    
-    document.getElementById('switchToHeadphonesBtn').addEventListener('click', () => {
-        isUsingHeadphones = true;
-        localStorage.setItem('headphonesConfirmed', 'true');
-        warning.remove();
-        
-        addChatMessage({
-            type: 'chat',
-            sender: 'SYSTEM',
-            message: '✅ Przełączono na tryb słuchawek',
-            color: '#4CAF50',
-            timestamp: Date.now()
-        });
-        
-        updateVoiceStatus('ready');
-    });
-    
-    // Hover efekty
-    const closeBtn = document.getElementById('closeHeadphoneWarning');
-    const switchBtn = document.getElementById('switchToHeadphonesBtn');
-    
-    closeBtn.addEventListener('mouseenter', function() {
-        this.style.background = 'rgba(255, 255, 255, 0.3)';
-        this.style.transform = 'translateY(-2px)';
-    });
-    
-    closeBtn.addEventListener('mouseleave', function() {
-        this.style.background = 'rgba(255, 255, 255, 0.2)';
-        this.style.transform = 'translateY(0)';
-    });
-    
-    switchBtn.addEventListener('mouseenter', function() {
-        this.style.transform = 'translateY(-2px) scale(1.05)';
-        this.style.boxShadow = '0 10px 25px rgba(0,0,0,0.3)';
-    });
-    
-    switchBtn.addEventListener('mouseleave', function() {
-        this.style.transform = 'translateY(0) scale(1)';
-        this.style.boxShadow = '0 5px 15px rgba(0,0,0,0.2)';
-    });
-    
-    setTimeout(() => {
-        if (document.body.contains(warning)) {
-            warning.style.animation = 'slideOutDown 0.5s ease-out';
-            setTimeout(() => warning.remove(), 500);
-        }
-    }, 15000);
-}
-
-function initChat() {
-    if (!chatToggle || !chatClose || !chatSend) return;
-    
-    chatToggle.addEventListener('click', toggleChat);
-    chatClose.addEventListener('click', closeChat);
-    chatSend.addEventListener('click', sendChatMessage);
-    
-    document.querySelectorAll('.emoji-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            sendEmoji(this.dataset.emoji);
-        });
-    });
-    
-    if (chatInput) {
-        chatInput.addEventListener('focus', () => {
-            keys.chatFocused = true;
-        });
-        
-        chatInput.addEventListener('blur', () => {
-            keys.chatFocused = false;
-        });
-        
-        chatInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                sendChatMessage();
+        try {
+            if (playerData.allowVoice !== false) {
+                await initVoiceChat();
+                if (isVoiceReady) {
+                    addChatMessage({
+                        type: 'chat',
+                        sender: 'SYSTEM',
+                        message: '✅ Voice chat w grze został aktywowany! Naciśnij V aby mówić.',
+                        color: '#4CAF50',
+                        timestamp: Date.now()
+                    });
+                }
+            } else {
+                updateVoiceStatus('disabled');
+                addChatMessage({
+                    type: 'chat',
+                    sender: 'SYSTEM',
+                    message: '🔇 Voice chat wyłączony w ustawieniach',
+                    color: '#9E9E9E',
+                    timestamp: Date.now()
+                });
             }
-        });
-    }
+        } catch (error) {
+            console.error("❌ Nie udało się automatycznie uzyskać dostępu:", error);
+            updateVoiceStatus('denied');
+            
+            addChatMessage({
+                type: 'chat',
+                sender: 'SYSTEM',
+                message: '⚠️ Aby użyć voice chatu, zezwól na dostęp do mikrofonu dla tej strony.',
+                color: '#FF9800',
+                timestamp: Date.now()
+            });
+            
+            // Dodaj przycisk do ręcznego włączenia
+            if (voiceStatus) {
+                voiceStatus.innerHTML = '<span style="color:#2196F3; cursor:pointer; text-decoration:underline">Kliknij, by włączyć mikrofon</span>';
+                voiceStatus.style.cursor = 'pointer';
+                voiceStatus.onclick = async () => {
+                    voiceStatus.innerHTML = 'Voice: Ładowanie...';
+                    await initVoiceChat();
+                };
+            }
+        }
+    }, 1500); // Opóźnienie 1.5 sekundy po załadowaniu gry
 }
 
 async function initVoiceChat() {
     try {
+        console.log("🔊 Inicjalizacja voice chatu w GRZE...");
+        console.log("🔊 Player pozwolił na voice:", playerData.allowVoice);
+        
         if (!playerData.allowVoice) {
             updateVoiceStatus('disabled');
+            addChatMessage({
+                type: 'chat',
+                sender: 'SYSTEM',
+                message: '🔇 Voice chat wyłączony w ustawieniach',
+                color: '#9E9E9E',
+                timestamp: Date.now()
+            });
             return;
         }
         
@@ -437,8 +167,9 @@ async function initVoiceChat() {
             return;
         }
         
-        console.log('🎤 Requesting microphone access...');
+        console.log('🎤 Prośba o dostęp do mikrofonu w GRZE...');
         
+        // JAWNA PROŚBA O DOSTĘP DLA STRONY GRY
         voiceStream = await navigator.mediaDevices.getUserMedia({
             audio: {
                 echoCancellation: { ideal: true },
@@ -446,22 +177,31 @@ async function initVoiceChat() {
                 autoGainControl: { ideal: true },
                 channelCount: 1,
                 sampleRate: 16000,
-                latency: 0.01
+                sampleSize: 16,
+                volume: 1.0
             },
             video: false
         });
         
-        console.log('✅ Microphone access granted!');
+        console.log('✅ Dostęp do mikrofonu w GRZE przyznany!');
         
         // Utwórz AudioContext
-        audioContext = new (window.AudioContext || window.webkitAudioContext)({
-            sampleRate: 16000,
-            latencyHint: 'interactive'
-        });
-        
-        // Sprawdź czy audio context działa
-        if (audioContext.state === 'suspended') {
-            await audioContext.resume();
+        try {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                sampleRate: 16000,
+                latencyHint: 'interactive'
+            });
+            
+            // Wznów AudioContext jeśli jest zawieszony
+            if (audioContext.state === 'suspended') {
+                await audioContext.resume();
+                console.log('✅ AudioContext wznowiony');
+            }
+            
+            console.log('✅ AudioContext utworzony dla odtwarzania');
+        } catch (err) {
+            console.warn('⚠️ Nie udało się utworzyć AudioContext:', err);
+            // Kontynuuj bez AudioContext
         }
         
         // Pobierz ustawienia słuchawek
@@ -476,199 +216,52 @@ async function initVoiceChat() {
         addChatMessage({
             type: 'chat',
             sender: 'SYSTEM',
-            message: `✅ Voice chat gotowy! ${isUsingHeadphones ? '(Tryb słuchawek)' : '(Tryb głośników)'} Naciśnij V aby mówić`,
+            message: `✅ Voice chat gotowy! ${isUsingHeadphones ? '(Tryb słuchawek 🎧)' : '(Tryb głośników 🔊)'} Naciśnij V aby mówić`,
             color: '#4CAF50',
             timestamp: Date.now()
         });
         
-        console.log('🎤 Voice chat initialized successfully');
+        console.log('🎤 Voice chat w grze zainicjalizowany pomyślnie');
         
     } catch (error) {
-        console.error('❌ Error accessing microphone:', error);
+        console.error('❌ Błąd dostępu do mikrofonu w grze:', error);
         updateVoiceStatus('denied');
         
-        addChatMessage({
-            type: 'chat',
-            sender: 'SYSTEM',
-            message: '❌ Brak dostępu do mikrofonu. Sprawdź uprawnienia przeglądarki.',
-            color: '#F44336',
-            timestamp: Date.now()
-        });
-    }
-}
-
-async function toggleVoiceChat() {
-    if (!isVoiceReady) {
-        await initVoiceChat();
-        return;
-    }
-    
-    if (isVoiceActive) {
-        stopVoiceChat();
-    } else {
-        startVoiceChat();
-    }
-}
-
-function startVoiceChat() {
-    if (!voiceStream || isVoiceActive) return;
-    
-    try {
-        console.log('🎤 Starting voice chat...');
-        
-        // Sprawdź dostępne formaty
-        const mimeTypes = [
-            'audio/webm;codecs=opus',
-            'audio/webm',
-            'audio/ogg;codecs=opus',
-            'audio/mp4',
-            'audio/mpeg'
-        ];
-        
-        let selectedMimeType = '';
-        for (const mimeType of mimeTypes) {
-            if (MediaRecorder.isTypeSupported(mimeType)) {
-                selectedMimeType = mimeType;
-                console.log(`✅ Using mime type: ${mimeType}`);
-                break;
-            }
+        if (error.name === 'NotAllowedError') {
+            addChatMessage({
+                type: 'chat',
+                sender: 'SYSTEM',
+                message: '❌ Brak dostępu do mikrofonu. Kliknij ikonę kłódki w pasku adresu i zezwól na dostęp.',
+                color: '#F44336',
+                timestamp: Date.now()
+            });
+        } else if (error.name === 'NotFoundError') {
+            addChatMessage({
+                type: 'chat',
+                sender: 'SYSTEM',
+                message: '❌ Nie znaleziono mikrofonu. Podłącz mikrofon i spróbuj ponownie.',
+                color: '#F44336',
+                timestamp: Date.now()
+            });
+        } else {
+            addChatMessage({
+                type: 'chat',
+                sender: 'SYSTEM',
+                message: `❌ Błąd mikrofonu: ${error.message}`,
+                color: '#F44336',
+                timestamp: Date.now()
+            });
         }
         
-        if (!selectedMimeType) {
-            selectedMimeType = 'audio/webm';
-            console.log('⚠️ No supported mime type found, using default');
+        // Dodaj przycisk do ponownej próby
+        if (voiceStatus) {
+            voiceStatus.innerHTML = '<span style="color:#2196F3; cursor:pointer; text-decoration:underline">Kliknij, by ponowić próbę</span>';
+            voiceStatus.style.cursor = 'pointer';
+            voiceStatus.onclick = async () => {
+                voiceStatus.innerHTML = 'Voice: Ładowanie...';
+                await initVoiceChat();
+            };
         }
-        
-        const options = {
-            mimeType: selectedMimeType,
-            audioBitsPerSecond: 128000 // 128 kbps dla dobrej jakości
-        };
-        
-        // Utwórz MediaRecorder
-        mediaRecorder = new MediaRecorder(voiceStream, options);
-        
-        let audioChunks = [];
-        
-        mediaRecorder.ondataavailable = (event) => {
-            if (event.data && event.data.size > 0) {
-                audioChunks.push(event.data);
-                
-                // Gdy skończy się nagrywanie, wyślij dane
-                if (mediaRecorder.state === 'inactive') {
-                    sendAudioChunks(audioChunks);
-                    audioChunks = [];
-                }
-            }
-        };
-        
-        mediaRecorder.onerror = (error) => {
-            console.error('❌ MediaRecorder error:', error);
-            updateVoiceStatus('error');
-        };
-        
-        mediaRecorder.onstart = () => {
-            console.log('🎤 Recording started');
-        };
-        
-        mediaRecorder.onstop = () => {
-            console.log('🎤 Recording stopped');
-        };
-        
-        // Zacznij nagrywanie
-        mediaRecorder.start(250); // Zbieraj dane co 250ms
-        
-        isVoiceActive = true;
-        
-        sendVoiceStatus('talking');
-        updateVoiceStatus('active');
-        
-        if (voiceToggle) {
-            voiceToggle.classList.add('active');
-            voiceToggle.innerHTML = '<i class="fas fa-microphone-slash"></i>';
-            voiceToggle.style.background = 'linear-gradient(135deg, #FF5252 0%, #D32F2F 100%)';
-        }
-        
-        console.log('✅ Voice chat started successfully');
-        
-    } catch (error) {
-        console.error('❌ Error starting voice chat:', error);
-        updateVoiceStatus('error');
-        
-        addChatMessage({
-            type: 'chat',
-            sender: 'SYSTEM',
-            message: '❌ Błąd podczas uruchamiania voice chatu',
-            color: '#F44336',
-            timestamp: Date.now()
-        });
-    }
-}
-
-async function sendAudioChunks(chunks) {
-    try {
-        if (!chunks.length || !ws || ws.readyState !== WebSocket.OPEN || !myId) {
-            return;
-        }
-        
-        // Połącz chunki w jeden blob
-        const blob = new Blob(chunks, { type: 'audio/webm' });
-        
-        // Konwertuj blob na base64
-        const base64Audio = await blobToBase64(blob);
-        
-        // Wyślij tylko jeśli audio ma sensowny rozmiar
-        if (base64Audio.length > 100) {
-            ws.send(JSON.stringify({
-                type: 'voiceAudio',
-                audio: base64Audio,
-                sequence: voiceSequence++
-            }));
-            
-            console.log(`📤 Sent audio packet: ${base64Audio.length} bytes, seq: ${voiceSequence}`);
-        }
-        
-    } catch (error) {
-        console.error('❌ Error sending audio:', error);
-    }
-}
-
-function blobToBase64(blob) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            // Usuń prefix "data:audio/webm;base64,"
-            const base64 = reader.result.split(',')[1];
-            resolve(base64);
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-    });
-}
-
-function stopVoiceChat() {
-    if (mediaRecorder && isVoiceActive) {
-        mediaRecorder.stop();
-        isVoiceActive = false;
-        
-        sendVoiceStatus('silent');
-        updateVoiceStatus('ready');
-        
-        if (voiceToggle) {
-            voiceToggle.classList.remove('active');
-            voiceToggle.innerHTML = '<i class="fas fa-microphone"></i>';
-            voiceToggle.style.background = '';
-        }
-        
-        console.log('✅ Voice chat stopped');
-    }
-}
-
-function sendVoiceStatus(status) {
-    if (ws.readyState === WebSocket.OPEN && myId) {
-        ws.send(JSON.stringify({
-            type: 'voiceStatus',
-            status: status
-        }));
     }
 }
 
@@ -676,6 +269,10 @@ function updateVoiceStatus(status) {
     if (!voiceStatus || !voiceIndicator) return;
     
     switch(status) {
+        case 'initializing':
+            voiceStatus.textContent = 'Voice: Inicjalizacja...';
+            voiceIndicator.style.background = '#FFC107';
+            break;
         case 'disabled':
             voiceStatus.textContent = 'Voice: Wył.';
             voiceIndicator.style.background = '#9E9E9E';
@@ -703,60 +300,274 @@ function updateVoiceStatus(status) {
     }
 }
 
+async function toggleVoiceChat() {
+    console.log("🔘 Przełączanie voice chat, gotowy:", isVoiceReady, "aktywny:", isVoiceActive);
+    
+    if (!isVoiceReady) {
+        console.log("⏳ Voice chat niegotowy, próba inicjalizacji...");
+        await initVoiceChat();
+        return;
+    }
+    
+    if (isVoiceActive) {
+        console.log("⏹️ Zatrzymywanie voice chat...");
+        stopVoiceChat();
+    } else {
+        console.log("▶️ Uruchamianie voice chat...");
+        startVoiceChat();
+    }
+}
+
+function startVoiceChat() {
+    if (!voiceStream || isVoiceActive) return;
+    
+    try {
+        console.log('🎤 Rozpoczynanie voice chat w grze...');
+        
+        // Sprawdź dostępne formaty
+        const mimeTypes = [
+            'audio/webm;codecs=opus',
+            'audio/webm',
+            'audio/ogg;codecs=opus',
+            'audio/mp4',
+            'audio/mpeg'
+        ];
+        
+        let selectedMimeType = '';
+        for (const mimeType of mimeTypes) {
+            if (MediaRecorder.isTypeSupported(mimeType)) {
+                selectedMimeType = mimeType;
+                console.log(`✅ Używanie mime type: ${mimeType}`);
+                break;
+            }
+        }
+        
+        if (!selectedMimeType) {
+            selectedMimeType = 'audio/webm';
+            console.log('⚠️ Nie znaleziono wspieranego mime type, używam domyślnego');
+        }
+        
+        const options = {
+            mimeType: selectedMimeType,
+            audioBitsPerSecond: 128000
+        };
+        
+        // Utwórz MediaRecorder
+        mediaRecorder = new MediaRecorder(voiceStream, options);
+        
+        let audioChunks = [];
+        
+        mediaRecorder.ondataavailable = (event) => {
+            if (event.data && event.data.size > 0) {
+                audioChunks.push(event.data);
+                
+                // Gdy skończy się nagrywanie, wyślij dane
+                if (mediaRecorder.state === 'inactive') {
+                    sendAudioChunks(audioChunks);
+                    audioChunks = [];
+                }
+            }
+        };
+        
+        mediaRecorder.onerror = (error) => {
+            console.error('❌ MediaRecorder error:', error);
+            updateVoiceStatus('error');
+        };
+        
+        mediaRecorder.onstart = () => {
+            console.log('🎤 Nagrywanie rozpoczęte');
+        };
+        
+        mediaRecorder.onstop = () => {
+            console.log('🎤 Nagrywanie zatrzymane');
+        };
+        
+        // Zacznij nagrywanie
+        mediaRecorder.start(250); // Zbieraj dane co 250ms
+        
+        isVoiceActive = true;
+        
+        sendVoiceStatus('talking');
+        updateVoiceStatus('active');
+        
+        if (voiceToggle) {
+            voiceToggle.classList.add('active');
+            voiceToggle.innerHTML = '<i class="fas fa-microphone-slash"></i>';
+            voiceToggle.style.background = 'linear-gradient(135deg, #FF5252 0%, #D32F2F 100%)';
+        }
+        
+        console.log('✅ Voice chat w grze rozpoczęty pomyślnie');
+        
+    } catch (error) {
+        console.error('❌ Błąd rozpoczynania voice chat w grze:', error);
+        updateVoiceStatus('error');
+        
+        addChatMessage({
+            type: 'chat',
+            sender: 'SYSTEM',
+            message: '❌ Błąd podczas uruchamiania voice chatu',
+            color: '#F44336',
+            timestamp: Date.now()
+        });
+    }
+}
+
+async function sendAudioChunks(chunks) {
+    try {
+        if (!chunks.length || !ws || ws.readyState !== WebSocket.OPEN || !myId) {
+            console.log('⚠️ Nie można wysłać audio: brak chunków, brak połączenia, lub brak ID');
+            return;
+        }
+        
+        // Połącz chunki w jeden blob
+        const blob = new Blob(chunks, { type: 'audio/webm' });
+        
+        if (blob.size < 100) {
+            console.log('⚠️ Audio blob zbyt mały:', blob.size);
+            return;
+        }
+        
+        // Konwertuj blob na base64
+        const base64Audio = await blobToBase64(blob);
+        
+        console.log(`📤 Wysyłanie audio: ${base64Audio.length} bajtów, seq: ${voiceSequence}`);
+        
+        // Wyślij dane
+        ws.send(JSON.stringify({
+            type: 'voiceAudio',
+            audio: base64Audio,
+            sequence: voiceSequence++
+        }));
+        
+    } catch (error) {
+        console.error('❌ Błąd wysyłania audio:', error);
+    }
+}
+
+function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const base64 = reader.result.split(',')[1];
+            resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+}
+
+function stopVoiceChat() {
+    if (mediaRecorder && isVoiceActive) {
+        mediaRecorder.stop();
+        isVoiceActive = false;
+        
+        sendVoiceStatus('silent');
+        updateVoiceStatus('ready');
+        
+        if (voiceToggle) {
+            voiceToggle.classList.remove('active');
+            voiceToggle.innerHTML = '<i class="fas fa-microphone"></i>';
+            voiceToggle.style.background = '';
+        }
+        
+        console.log('✅ Voice chat zatrzymany');
+    }
+}
+
+function sendVoiceStatus(status) {
+    if (ws.readyState === WebSocket.OPEN && myId) {
+        ws.send(JSON.stringify({
+            type: 'voiceStatus',
+            status: status
+        }));
+    }
+}
+
 function playVoiceAudio(fromPlayerId, audioData, volume = 1.0) {
     try {
+        console.log(`🔊 Odtwarzanie audio od ${fromPlayerId}, głośność: ${volume}, rozmiar danych: ${audioData?.length || 0}`);
+        
+        if (!audioData || audioData.length < 10) {
+            console.warn('⚠️ Dane audio zbyt małe lub puste');
+            return;
+        }
+        
+        // Utwórz AudioContext jeśli nie istnieje
         if (!audioContext || audioContext.state === 'closed') {
-            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                    sampleRate: 16000,
+                    latencyHint: 'interactive'
+                });
+                console.log('✅ AudioContext utworzony w playVoiceAudio');
+            } catch (err) {
+                console.error('❌ Błąd tworzenia AudioContext:', err);
+                return;
+            }
         }
         
         if (audioContext.state === 'suspended') {
-            audioContext.resume();
+            audioContext.resume().then(() => {
+                console.log('✅ AudioContext wznowiony');
+            }).catch(err => {
+                console.error('❌ Błąd wznawiania AudioContext:', err);
+            });
         }
         
-        let audioElement = audioElements.get(fromPlayerId);
-        
-        if (!audioElement) {
-            audioElement = new Audio();
+        // Konwertuj base64 na ArrayBuffer
+        try {
+            const binaryString = atob(audioData);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            
+            // Utwórz blob
+            const blob = new Blob([bytes], { type: 'audio/webm' });
+            const audioUrl = URL.createObjectURL(blob);
+            
+            // Utwórz element audio
+            const audioElement = new Audio();
             audioElement.autoplay = true;
-            audioElements.set(fromPlayerId, audioElement);
-        }
-        
-        // Dostosuj głośność (50% maksymalnej dla komfortu)
-        const adjustedVolume = Math.max(0.1, Math.min(0.5, volume * 0.5));
-        audioElement.volume = adjustedVolume;
-        
-        // Konwertuj base64 na blob
-        const byteCharacters = atob(audioData);
-        const byteNumbers = new Array(byteCharacters.length);
-        
-        for (let i = 0; i < byteCharacters.length; i++) {
-            byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: 'audio/webm' });
-        const audioUrl = URL.createObjectURL(blob);
-        
-        // Ustaw źródło audio
-        audioElement.src = audioUrl;
-        
-        showVoiceActivity(fromPlayerId, true);
-        
-        audioElement.onended = () => {
+            
+            // Dostosuj głośność (ogranicz do 50% dla komfortu)
+            const adjustedVolume = Math.max(0.05, Math.min(0.5, volume * 0.5));
+            audioElement.volume = adjustedVolume;
+            
+            audioElement.src = audioUrl;
+            
+            // Pokaż aktywność voice
+            showVoiceActivity(fromPlayerId, true);
+            
+            audioElement.onplay = () => {
+                console.log(`🔊 Audio rozpoczęło odtwarzanie od ${fromPlayerId}`);
+            };
+            
+            audioElement.onended = () => {
+                console.log(`🔊 Audio zakończone od ${fromPlayerId}`);
+                showVoiceActivity(fromPlayerId, false);
+                URL.revokeObjectURL(audioUrl);
+            };
+            
+            audioElement.onerror = (error) => {
+                console.error('❌ Błąd odtwarzania audio:', error);
+                showVoiceActivity(fromPlayerId, false);
+                URL.revokeObjectURL(audioUrl);
+            };
+            
+            // Spróbuj odtworzyć
+            audioElement.play().catch(err => {
+                console.error('❌ Błąd odtwarzania elementu audio:', err);
+                showVoiceActivity(fromPlayerId, false);
+            });
+            
+        } catch (error) {
+            console.error('❌ Błąd przetwarzania danych audio:', error);
             showVoiceActivity(fromPlayerId, false);
-            URL.revokeObjectURL(audioUrl);
-        };
-        
-        audioElement.onerror = (error) => {
-            console.error('❌ Audio playback error:', error);
-            showVoiceActivity(fromPlayerId, false);
-            URL.revokeObjectURL(audioUrl);
-        };
-        
-        console.log(`🔊 Playing audio from ${fromPlayerId}, volume: ${adjustedVolume.toFixed(2)}`);
+        }
         
     } catch (error) {
-        console.error('❌ Error playing audio:', error);
+        console.error('❌ Błąd w playVoiceAudio:', error);
         showVoiceActivity(fromPlayerId, false);
     }
 }
@@ -821,7 +632,7 @@ function handleVoiceConnect(playerId, nickname, distance) {
             voiceCountElement.textContent = voiceConnections.size;
         }
         
-        console.log(`🔊 Voice connected to ${nickname}`);
+        console.log(`🔊 Voice połączony z ${nickname}`);
     }
 }
 
@@ -853,7 +664,37 @@ function handleVoiceDisconnect(playerId) {
             voiceCountElement.textContent = voiceConnections.size;
         }
         
-        console.log(`🔇 Voice disconnected from ${playerId}`);
+        console.log(`🔇 Voice rozłączony od ${playerId}`);
+    }
+}
+
+function initChat() {
+    if (!chatToggle || !chatClose || !chatSend) return;
+    
+    chatToggle.addEventListener('click', toggleChat);
+    chatClose.addEventListener('click', closeChat);
+    chatSend.addEventListener('click', sendChatMessage);
+    
+    document.querySelectorAll('.emoji-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            sendEmoji(this.dataset.emoji);
+        });
+    });
+    
+    if (chatInput) {
+        chatInput.addEventListener('focus', () => {
+            keys.chatFocused = true;
+        });
+        
+        chatInput.addEventListener('blur', () => {
+            keys.chatFocused = false;
+        });
+        
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                sendChatMessage();
+            }
+        });
     }
 }
 
@@ -1026,16 +867,10 @@ window.addEventListener("keyup", e => {
 });
 
 ws.onopen = () => {
-    console.log("✅ WebSocket connected");
+    console.log("✅ WebSocket połączony");
     
     initDOM();
     initChat();
-    
-    if (playerData.allowVoice !== false) {
-        initVoiceChat();
-    } else {
-        updateVoiceStatus('disabled');
-    }
     
     ws.send(JSON.stringify({
         type: "join",
@@ -1063,7 +898,7 @@ ws.onerror = (e) => {
 };
 
 ws.onclose = () => {
-    console.warn("⚠️ WebSocket closed");
+    console.warn("⚠️ WebSocket zamknięty");
     stopVoiceChat();
     addChatMessage({
         type: 'chat',
@@ -1078,6 +913,7 @@ ws.onclose = () => {
 ws.onmessage = (e) => {
     try {
         const data = JSON.parse(e.data);
+        console.log(`📥 Otrzymano: ${data.type}`);
         
         switch(data.type) {
             case "init":
@@ -1086,9 +922,9 @@ ws.onmessage = (e) => {
                 voiceRange = data.voiceRange || 200;
                 const voiceRangeInfo = document.getElementById('voiceRangeInfo');
                 if (voiceRangeInfo) {
-                    voiceRangeInfo.textContent = '20m';
+                    voiceRangeInfo.textContent = `${voiceRange/10}m`;
                 }
-                console.log(`🎮 Player initialized: ${myId}, voice range: ${voiceRange}`);
+                console.log(`🎮 Gracz zainicjalizowany: ${myId}, zasięg voice: ${voiceRange}`);
                 break;
                 
             case "state":
@@ -1126,15 +962,17 @@ ws.onmessage = (e) => {
                 break;
                 
             case "voiceConnect":
+                console.log(`🔊 Voice connect z ${data.nickname}, dystans: ${data.distance}`);
                 handleVoiceConnect(data.playerId, data.nickname, data.distance);
                 break;
                 
             case "voiceDisconnect":
+                console.log(`🔊 Voice disconnect od ${data.playerId}`);
                 handleVoiceDisconnect(data.playerId);
                 break;
                 
             case "voiceAudio":
-                console.log(`🔊 Received audio from ${data.nickname || data.from}, volume: ${data.volume}, distance: ${data.distance}`);
+                console.log(`🔊 Voice audio od ${data.nickname || data.from}, głośność: ${data.volume}, dystans: ${data.distance}, seq: ${data.sequence}`);
                 playVoiceAudio(data.from, data.audio, data.volume);
                 break;
                 
@@ -1147,6 +985,7 @@ ws.onmessage = (e) => {
                 break;
                 
             case "voiceStatusUpdate":
+                console.log(`🔊 Voice status update: ${data.playerId} jest ${data.status}`);
                 showVoiceActivity(data.playerId, data.status === 'talking');
                 break;
                 
@@ -1154,7 +993,7 @@ ws.onmessage = (e) => {
                 break;
         }
     } catch (err) {
-        console.error("❌ Error parsing data:", err);
+        console.error("❌ Błąd parsowania danych:", err, e.data);
     }
 };
 
@@ -1466,6 +1305,38 @@ setInterval(() => {
         }));
     }
 }, 20000);
+
+// Dodaj automatyczne wznawianie AudioContext po interakcji użytkownika
+document.addEventListener('click', async () => {
+    if (audioContext && audioContext.state === 'suspended') {
+        try {
+            await audioContext.resume();
+            console.log('✅ AudioContext wznowiony po interakcji użytkownika');
+        } catch (err) {
+            console.error('❌ Błąd wznawiania AudioContext:', err);
+        }
+    }
+});
+
+// Dodaj debugowanie voice chatu
+function testVoiceChat() {
+    console.log('🔊 Voice Chat Debug Info:');
+    console.log('- Voice stream:', voiceStream ? '✓' : '✗');
+    console.log('- Audio context:', audioContext ? audioContext.state : 'none');
+    console.log('- Is voice ready:', isVoiceReady);
+    console.log('- Is voice active:', isVoiceActive);
+    console.log('- Media recorder:', mediaRecorder ? mediaRecorder.state : 'none');
+    console.log('- Voice connections:', voiceConnections.size);
+    console.log('- Players in range:', players.filter(p => p.id !== myId).length);
+}
+
+// Dodaj klawisz debugowania (F12)
+window.addEventListener('keydown', e => {
+    if (e.key === 'F12') {
+        e.preventDefault();
+        testVoiceChat();
+    }
+});
 
 // Dodaj style CSS
 const style = document.createElement('style');
