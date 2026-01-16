@@ -5,46 +5,57 @@ const wss = new WebSocket.Server({ port: PORT });
 const players = {};
 const foods = [];
 const viruses = [];
-const bullets = []; // Nowe: pociski/wystrzelone kulki
+const bullets = [];
 const chatHistory = [];
 const voiceConnections = new Map();
 const MAX_CHAT_HISTORY = 100;
 const MAP_SIZE = 5000;
-const MAX_RADIUS = 300;
+const MAX_RADIUS = 500;
 const INITIAL_RADIUS = 20;
 const SPEED_FACTOR = 3;
 const VOICE_RANGE = 200;
-const FOOD_COUNT = 500;
-const VIRUS_COUNT = 15;
-const BULLET_LIFETIME = 30000; // 30 sekund
-const SPLIT_COOLDOWN = 10000; // 10 sekund cooldown na rozdzielenie
+const FOOD_COUNT = 1000;
+const VIRUS_COUNT = 20;
+const BULLET_LIFETIME = 30000;
+const SPLIT_COOLDOWN = 10000;
+const VIRUS_SPLIT_COUNT = 10;
 
 // Inicjalizacja jedzenia
-for (let i = 0; i < FOOD_COUNT; i++) {
-    foods.push({
-        id: `food_${i}`,
-        x: Math.random() * MAP_SIZE,
-        y: Math.random() * MAP_SIZE,
-        r: 5 + Math.random() * 5,
-        color: `hsl(${Math.random() * 360}, 70%, 60%)`,
-        type: 'normal'
-    });
+function initFood() {
+    foods.length = 0;
+    for (let i = 0; i < FOOD_COUNT; i++) {
+        foods.push({
+            id: `food_${Date.now()}_${i}`,
+            x: Math.random() * MAP_SIZE,
+            y: Math.random() * MAP_SIZE,
+            r: 5 + Math.random() * 5,
+            color: `hsl(${Math.random() * 360}, 70%, 60%)`,
+            type: 'normal'
+        });
+    }
 }
 
-// Inicjalizacja wirusów/uciekających kulek
-for (let i = 0; i < VIRUS_COUNT; i++) {
-    viruses.push({
-        id: `virus_${i}`,
-        x: Math.random() * MAP_SIZE,
-        y: Math.random() * MAP_SIZE,
-        r: 30 + Math.random() * 20,
-        color: '#00FF00',
-        speed: 1.5,
-        targetX: Math.random() * MAP_SIZE,
-        targetY: Math.random() * MAP_SIZE,
-        lastUpdate: Date.now()
-    });
+// Inicjalizacja wirusów
+function initViruses() {
+    viruses.length = 0;
+    for (let i = 0; i < VIRUS_COUNT; i++) {
+        viruses.push({
+            id: `virus_${Date.now()}_${i}`,
+            x: Math.random() * MAP_SIZE,
+            y: Math.random() * MAP_SIZE,
+            r: 30 + Math.random() * 20,
+            color: '#00FF00',
+            speed: 1.5,
+            targetX: Math.random() * MAP_SIZE,
+            targetY: Math.random() * MAP_SIZE,
+            lastUpdate: Date.now(),
+            type: 'virus'
+        });
+    }
 }
+
+initFood();
+initViruses();
 
 function randomPos() {
     return Math.random() * MAP_SIZE;
@@ -83,7 +94,8 @@ function spawnVirus() {
         speed: 1.5,
         targetX: Math.random() * MAP_SIZE,
         targetY: Math.random() * MAP_SIZE,
-        lastUpdate: Date.now()
+        lastUpdate: Date.now(),
+        type: 'virus'
     });
 }
 
@@ -135,6 +147,11 @@ function updateBullets() {
         // Sprawdź czy kula wygasła
         if (now - bullet.createdAt > BULLET_LIFETIME) {
             bullets.splice(i, 1);
+            
+            // Jeśli kula wygasła, dodaj część masy z powrotem do gracza
+            if (players[bullet.ownerId]) {
+                players[bullet.ownerId].r += bullet.r * 0.5;
+            }
             continue;
         }
         
@@ -147,7 +164,7 @@ function updateBullets() {
             
             if (dist < 10) {
                 // Połączenie z właścicielem
-                owner.r += bullet.r * 0.8; // Odzyskaj 80% masy
+                owner.r += bullet.r * 0.8;
                 bullets.splice(i, 1);
                 
                 // Powiadom gracza
@@ -161,6 +178,9 @@ function updateBullets() {
                 bullet.x += (dx / dist) * speed;
                 bullet.y += (dy / dist) * speed;
             }
+        } else {
+            // Jeśli właściciel nie istnieje, usuń kulę
+            bullets.splice(i, 1);
         }
     }
 }
@@ -176,7 +196,7 @@ function checkCollisions(playerId) {
         
         if (dist < player.r) {
             // Zjedz jedzenie
-            player.r += food.r * 0.5; // 50% masy z jedzenia
+            player.r += food.r * 0.5;
             foods.splice(i, 1);
             
             // Respawnuj nowe jedzenie
@@ -200,8 +220,8 @@ function checkCollisions(playerId) {
                 player.r += virus.r;
                 viruses.splice(i, 1);
                 
-                // Stwórz 10 małych kulek
-                for (let j = 0; j < 10; j++) {
+                // Stwórz 10 małych kulek z wirusa
+                for (let j = 0; j < VIRUS_SPLIT_COUNT; j++) {
                     foods.push({
                         id: `food_virus_${Date.now()}_${j}`,
                         x: player.x + (Math.random() - 0.5) * 200,
@@ -253,7 +273,7 @@ function checkCollisions(playerId) {
         if (dist < player.r + other.r) {
             if (player.r > other.r * 1.1) {
                 // Zjedz innego gracza
-                player.r += other.r * 0.7; // 70% masy z gracza
+                player.r += other.r * 0.7;
                 
                 // Powiadom obu graczy
                 sendToPlayer(playerId, {
@@ -299,7 +319,7 @@ function checkCollisions(playerId) {
         if (dist < player.r + bullet.r) {
             if (player.r > bullet.r * 1.1) {
                 // Zjedz pocisk
-                player.r += bullet.r * 0.6; // 60% masy z pocisku
+                player.r += bullet.r * 0.6;
                 bullets.splice(i, 1);
                 
                 sendToPlayer(playerId, {
@@ -495,7 +515,7 @@ wss.on('connection', ws => {
                     id: playerId,
                     mapSize: MAP_SIZE,
                     voiceRange: VOICE_RANGE,
-                    foods: foods.slice(0, 100), // Wyślij tylko część jedzenia
+                    foods: foods.slice(0, 200),
                     viruses: viruses,
                     players: Object.values(players).map(p => ({
                         id: p.id,
@@ -741,7 +761,7 @@ setInterval(() => {
             imageUrl: p.imageUrl,
             isSpeaking: p.isSpeaking || false
         })),
-        foods: foods.slice(0, 200), // Ogranicz liczbę przesyłanych kulek
+        foods: foods.slice(0, 300),
         viruses: viruses,
         bullets: bullets,
         timestamp: Date.now()
@@ -759,14 +779,25 @@ setInterval(() => {
             }
         }
     });
-}, 50); // 20 FPS
+}, 50);
 
-// Respawn jedzenia co 10 sekund
+// Respawn jedzenia
 setInterval(() => {
     if (foods.length < FOOD_COUNT * 0.8) {
-        const toSpawn = Math.min(20, FOOD_COUNT - foods.length);
+        const toSpawn = Math.min(50, FOOD_COUNT - foods.length);
         spawnFood(toSpawn);
         console.log(`🍎 Respawned ${toSpawn} food`);
+    }
+}, 5000);
+
+// Respawn wirusów
+setInterval(() => {
+    if (viruses.length < VIRUS_COUNT * 0.8) {
+        const toSpawn = Math.min(5, VIRUS_COUNT - viruses.length);
+        for (let i = 0; i < toSpawn; i++) {
+            spawnVirus();
+        }
+        console.log(`🦠 Respawned ${toSpawn} viruses`);
     }
 }, 10000);
 
