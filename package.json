@@ -1,15 +1,28 @@
 {
   "name": "agario-multiplayer",
-  "version": "3.0.0",
-  "description": "Agario Multiplayer z Voice Chat",
+  "version": "4.0.0",
+  "description": "Agario Multiplayer z Voice Chat i nowymi funkcjami",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
   "dependencies": {
     "ws": "^8.0.0"
   },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
   "engines": {
     "node": ">=14.0.0"
-  }
+  },
+  "keywords": [
+    "agario",
+    "multiplayer",
+    "game",
+    "websocket",
+    "voice-chat"
+  ],
+  "author": "Twoja Nazwa",
+  "license": "MIT"
 }
