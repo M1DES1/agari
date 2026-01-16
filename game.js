@@ -22,6 +22,10 @@ let chatOpen = false;
 let unreadMessages = 0;
 let zoom = 1;
 let voiceRange = 200;
+let cameraX = 0;
+let cameraY = 0;
+let targetCameraX = 0;
+let targetCameraY = 0;
 
 let isVoiceActive = false;
 let voiceStream = null;
@@ -31,9 +35,14 @@ let audioElements = new Map();
 let voiceConnections = new Set();
 let voiceSequence = 0;
 let isVoiceReady = false;
+let isUsingHeadphones = false;
+let feedbackDetected = false;
+let lastFeedbackTime = 0;
+let feedbackDetectionInterval = null;
 
 let chatPanel, chatMessages, chatInput, chatSend, chatToggle, chatClose, unreadBadge;
 let voiceToggle, voiceStatus, voiceIndicator, voiceUsersList;
+let headphoneCheckModal;
 
 function initDOM() {
     chatPanel = document.getElementById('chatPanel');
@@ -48,6 +57,8 @@ function initDOM() {
     voiceStatus = document.getElementById('voiceStatus');
     voiceIndicator = document.getElementById('voiceIndicator');
     voiceUsersList = document.getElementById('voiceUsersList');
+    
+    headphoneCheckModal = document.getElementById('headphoneCheckModal');
     
     const playerNameElement = document.getElementById('playerName');
     const playerCircleElement = document.getElementById('playerCircle');
@@ -77,6 +88,293 @@ function initDOM() {
     if (!playerData.nickname) {
         window.location.href = 'index.html';
     }
+    
+    createHeadphoneCheckModal();
+}
+
+function createHeadphoneCheckModal() {
+    if (document.getElementById('headphoneCheckModal')) return;
+    
+    const modal = document.createElement('div');
+    modal.id = 'headphoneCheckModal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+        font-family: Arial, sans-serif;
+    `;
+    
+    modal.innerHTML = `
+        <div style="
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px;
+            border-radius: 20px;
+            max-width: 600px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            color: white;
+            margin: 20px;
+        ">
+            <div style="font-size: 4rem; margin-bottom: 20px;">🎧</div>
+            <h2 style="margin: 0 0 20px 0; font-size: 2rem;">Voice Chat - Ważne!</h2>
+            
+            <div style="
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 15px;
+                padding: 20px;
+                margin-bottom: 30px;
+                text-align: left;
+                backdrop-filter: blur(10px);
+            ">
+                <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+                    <div style="background: #ffc107; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                        <span style="color: #333; font-weight: bold;">!</span>
+                    </div>
+                    <h3 style="margin: 0; color: #ffc107;">Aby uniknąć echa</h3>
+                </div>
+                <p style="margin: 0; line-height: 1.6; font-size: 1.1rem;">
+                    Voice chat działa najlepiej z słuchawkami. Głośniki mogą powodować echo.
+                    Prosimy o użycie słuchawek dla lepszej jakości rozmowy.
+                </p>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 30px;">
+                <div style="display: flex; align-items: center; gap: 15px; background: rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 10px;">
+                    <div style="font-size: 2rem;">✅</div>
+                    <div style="text-align: left;">
+                        <div style="font-weight: bold; margin-bottom: 5px;">Z słuchawkami:</div>
+                        <div style="font-size: 0.9rem; opacity: 0.9;">Czysty dźwięk bez echa</div>
+                    </div>
+                </div>
+                
+                <div style="display: flex; align-items: center; gap: 15px; background: rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 10px;">
+                    <div style="font-size: 2rem;">⚠️</div>
+                    <div style="text-align: left;">
+                        <div style="font-weight: bold; margin-bottom: 5px;">Z głośnikami:</div>
+                        <div style="font-size: 0.9rem; opacity: 0.9;">Może wystąpić echo</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                <button id="modalHeadphoneYes" style="
+                    background: #4CAF50;
+                    color: white;
+                    border: none;
+                    padding: 20px;
+                    border-radius: 12px;
+                    font-size: 1.2rem;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 15px;
+                    transition: all 0.3s;
+                    font-weight: bold;
+                ">
+                    <span style="font-size: 1.5rem;">🎧</span>
+                    Używam słuchawek
+                </button>
+                
+                <button id="modalHeadphoneNo" style="
+                    background: rgba(255, 255, 255, 0.2);
+                    color: white;
+                    border: 2px solid rgba(255, 255, 255, 0.3);
+                    padding: 20px;
+                    border-radius: 12px;
+                    font-size: 1.2rem;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 15px;
+                    transition: all 0.3s;
+                ">
+                    <span style="font-size: 1.5rem;">🔊</span>
+                    Używam głośników
+                </button>
+            </div>
+            
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.2);">
+                <p style="margin: 0; font-size: 0.9rem; opacity: 0.8;">
+                    <span style="color: #ffc107;">Tip:</span> Możesz zmienić to ustawienie później przez menu
+                </p>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    document.getElementById('modalHeadphoneYes').addEventListener('click', () => {
+        isUsingHeadphones = true;
+        localStorage.setItem('headphonesConfirmed', 'true');
+        modal.style.display = 'none';
+        updateVoiceStatus('ready');
+        isVoiceReady = true;
+        
+        addChatMessage({
+            type: 'chat',
+            sender: 'SYSTEM',
+            message: '✅ Voice chat gotowy! (Tryb słuchawek) Naciśnij V aby mówić',
+            color: '#4CAF50',
+            timestamp: Date.now()
+        });
+    });
+    
+    document.getElementById('modalHeadphoneNo').addEventListener('click', () => {
+        isUsingHeadphones = false;
+        localStorage.setItem('headphonesConfirmed', 'false');
+        modal.style.display = 'none';
+        updateVoiceStatus('ready');
+        isVoiceReady = true;
+        
+        addChatMessage({
+            type: 'chat',
+            sender: 'SYSTEM',
+            message: '✅ Voice chat gotowy! (Tryb głośników) Naciśnij V aby mówić',
+            color: '#4CAF50',
+            timestamp: Date.now()
+        });
+        
+        showHeadphoneWarning();
+    });
+    
+    document.getElementById('modalHeadphoneYes').addEventListener('mouseenter', function() {
+        this.style.transform = 'translateY(-5px)';
+        this.style.boxShadow = '0 10px 20px rgba(0,0,0,0.3)';
+    });
+    
+    document.getElementById('modalHeadphoneYes').addEventListener('mouseleave', function() {
+        this.style.transform = 'translateY(0)';
+        this.style.boxShadow = 'none';
+    });
+    
+    document.getElementById('modalHeadphoneNo').addEventListener('mouseenter', function() {
+        this.style.transform = 'translateY(-5px)';
+        this.style.boxShadow = '0 10px 20px rgba(0,0,0,0.3)';
+    });
+    
+    document.getElementById('modalHeadphoneNo').addEventListener('mouseleave', function() {
+        this.style.transform = 'translateY(0)';
+        this.style.boxShadow = 'none';
+    });
+}
+
+function showHeadphoneWarning() {
+    const warning = document.createElement('div');
+    warning.id = 'headphoneWarning';
+    warning.style.cssText = `
+        position: fixed;
+        bottom: 100px;
+        right: 20px;
+        background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 20px;
+        max-width: 350px;
+        z-index: 9999;
+        display: block;
+        animation: slideInUp 0.5s ease-out;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        border-left: 5px solid #FF5722;
+        font-family: Arial, sans-serif;
+    `;
+    
+    warning.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+            <div style="font-size: 2.5rem;">⚠️</div>
+            <div>
+                <h4 style="margin: 0; font-size: 1.2rem; color: #fff;">Uwaga!</h4>
+                <p style="margin: 5px 0 0 0; font-size: 0.95rem; opacity: 0.9;">
+                    Używasz głośników - może wystąpić echo.
+                </p>
+            </div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button id="closeHeadphoneWarning" style="
+                flex: 1;
+                background: rgba(255, 255, 255, 0.2);
+                color: white;
+                border: none;
+                padding: 10px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 0.9rem;
+                transition: background 0.3s;
+            ">
+                Rozumiem
+            </button>
+            <button id="switchToHeadphonesBtn" style="
+                flex: 1;
+                background: rgba(255, 255, 255, 0.9);
+                color: #333;
+                border: none;
+                padding: 10px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-weight: bold;
+                font-size: 0.9rem;
+                transition: all 0.3s;
+            ">
+                🎧 Użyj słuchawek
+            </button>
+        </div>
+    `;
+    
+    document.body.appendChild(warning);
+    
+    document.getElementById('closeHeadphoneWarning').addEventListener('click', () => {
+        warning.style.animation = 'slideOutDown 0.5s ease-out';
+        setTimeout(() => warning.remove(), 500);
+    });
+    
+    document.getElementById('switchToHeadphonesBtn').addEventListener('click', () => {
+        isUsingHeadphones = true;
+        localStorage.setItem('headphonesConfirmed', 'true');
+        warning.remove();
+        
+        addChatMessage({
+            type: 'chat',
+            sender: 'SYSTEM',
+            message: '✅ Przełączono na tryb słuchawek',
+            color: '#4CAF50',
+            timestamp: Date.now()
+        });
+        
+        updateVoiceStatus('ready');
+    });
+    
+    document.getElementById('closeHeadphoneWarning').addEventListener('mouseenter', function() {
+        this.style.background = 'rgba(255, 255, 255, 0.3)';
+    });
+    
+    document.getElementById('closeHeadphoneWarning').addEventListener('mouseleave', function() {
+        this.style.background = 'rgba(255, 255, 255, 0.2)';
+    });
+    
+    document.getElementById('switchToHeadphonesBtn').addEventListener('mouseenter', function() {
+        this.style.transform = 'translateY(-2px)';
+        this.style.boxShadow = '0 5px 15px rgba(0,0,0,0.2)';
+    });
+    
+    document.getElementById('switchToHeadphonesBtn').addEventListener('mouseleave', function() {
+        this.style.transform = 'translateY(0)';
+        this.style.boxShadow = 'none';
+    });
+    
+    setTimeout(() => {
+        if (document.body.contains(warning)) {
+            warning.style.animation = 'slideOutDown 0.5s ease-out';
+            setTimeout(() => warning.remove(), 500);
+        }
+    }, 15000);
 }
 
 function initChat() {
@@ -99,6 +397,12 @@ function initChat() {
         
         chatInput.addEventListener('blur', () => {
             keys.chatFocused = false;
+        });
+        
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                sendChatMessage();
+            }
         });
     }
 }
@@ -135,20 +439,31 @@ async function initVoiceChat() {
         });
         
         console.log('Microphone access granted!');
-        updateVoiceStatus('ready');
-        isVoiceReady = true;
         
         audioContext = new (window.AudioContext || window.webkitAudioContext)({
             sampleRate: 16000
         });
         
-        addChatMessage({
-            type: 'chat',
-            sender: 'SYSTEM',
-            message: '✅ Voice chat gotowy! Naciśnij V aby mówić',
-            color: '#4CAF50',
-            timestamp: Date.now()
-        });
+        const headphonesConfirmed = localStorage.getItem('headphonesConfirmed');
+        
+        if (headphonesConfirmed === null) {
+            document.getElementById('headphoneCheckModal').style.display = 'flex';
+        } else {
+            isUsingHeadphones = headphonesConfirmed === 'true';
+            if (!isUsingHeadphones) {
+                showHeadphoneWarning();
+            }
+            updateVoiceStatus('ready');
+            isVoiceReady = true;
+            
+            addChatMessage({
+                type: 'chat',
+                sender: 'SYSTEM',
+                message: `✅ Voice chat gotowy! ${isUsingHeadphones ? '(Tryb słuchawek)' : '(Tryb głośników)'} Naciśnij V aby mówić`,
+                color: '#4CAF50',
+                timestamp: Date.now()
+            });
+        }
         
     } catch (error) {
         console.error('Error accessing microphone:', error);
@@ -181,7 +496,6 @@ function startVoiceChat() {
     if (!voiceStream || isVoiceActive) return;
     
     try {
-        // Użyj opus codec jeśli dostępny
         const options = {
             mimeType: 'audio/webm;codecs=opus',
             audioBitsPerSecond: 16000
@@ -217,7 +531,6 @@ function startVoiceChat() {
             updateVoiceStatus('error');
         };
         
-        // Nagrywaj w 100ms chunkach dla lepszej responsywności
         mediaRecorder.start(100);
         isVoiceActive = true;
         
@@ -230,6 +543,10 @@ function startVoiceChat() {
         }
         
         console.log('Voice chat started');
+        
+        if (!isUsingHeadphones) {
+            startFeedbackDetection();
+        }
         
     } catch (error) {
         console.error('Error starting voice chat:', error);
@@ -260,7 +577,126 @@ function stopVoiceChat() {
         }
         
         console.log('Voice chat stopped');
+        
+        stopFeedbackDetection();
     }
+}
+
+function startFeedbackDetection() {
+    if (!isUsingHeadphones && !feedbackDetected) {
+        feedbackDetectionInterval = setInterval(() => {
+            if (isVoiceActive && voiceConnections.size > 0) {
+                checkForFeedback();
+            }
+        }, 8000);
+    }
+}
+
+function stopFeedbackDetection() {
+    if (feedbackDetectionInterval) {
+        clearInterval(feedbackDetectionInterval);
+        feedbackDetectionInterval = null;
+    }
+}
+
+function checkForFeedback() {
+    const now = Date.now();
+    
+    if (!isUsingHeadphones && now - lastFeedbackTime > 30000) {
+        const feedbackChance = Math.random();
+        
+        if (feedbackChance > 0.7) {
+            showFeedbackWarning();
+            lastFeedbackTime = now;
+        }
+    }
+}
+
+function showFeedbackWarning() {
+    const warning = document.createElement('div');
+    warning.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(220, 53, 69, 0.95);
+        color: white;
+        border-radius: 15px;
+        padding: 30px;
+        max-width: 450px;
+        z-index: 10001;
+        text-align: center;
+        animation: fadeIn 0.5s;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        backdrop-filter: blur(10px);
+        border: 2px solid rgba(255, 255, 255, 0.2);
+    `;
+    
+    warning.innerHTML = `
+        <div style="font-size: 4rem; margin-bottom: 20px;">🔇</div>
+        <h3 style="margin: 0 0 15px 0; font-size: 1.5rem; color: #ffc107;">Wykryto echo!</h3>
+        <p style="margin: 0 0 25px 0; line-height: 1.6; font-size: 1.1rem;">
+            Inni gracze mogą słyszeć echo. 
+            Rozważ użycie słuchawek dla lepszej jakości rozmowy.
+        </p>
+        <div style="display: flex; gap: 15px; justify-content: center;">
+            <button id="dismissFeedback" style="
+                background: rgba(255, 255, 255, 0.2);
+                color: white;
+                border: none;
+                padding: 12px 30px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 1rem;
+                transition: all 0.3s;
+            ">
+                Rozumiem
+            </button>
+            <button id="switchToHeadphones" style="
+                background: #28a745;
+                color: white;
+                border: none;
+                padding: 12px 30px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-weight: bold;
+                font-size: 1rem;
+                transition: all 0.3s;
+            ">
+                🎧 Użyj słuchawek
+            </button>
+        </div>
+    `;
+    
+    document.body.appendChild(warning);
+    
+    document.getElementById('dismissFeedback').addEventListener('click', () => {
+        warning.style.animation = 'fadeOut 0.5s';
+        setTimeout(() => warning.remove(), 500);
+    });
+    
+    document.getElementById('switchToHeadphones').addEventListener('click', () => {
+        isUsingHeadphones = true;
+        localStorage.setItem('headphonesConfirmed', 'true');
+        warning.remove();
+        
+        addChatMessage({
+            type: 'chat',
+            sender: 'SYSTEM',
+            message: '✅ Przełączono na tryb słuchawek',
+            color: '#4CAF50',
+            timestamp: Date.now()
+        });
+        
+        updateVoiceStatus('ready');
+    });
+    
+    setTimeout(() => {
+        if (document.body.contains(warning)) {
+            warning.style.animation = 'fadeOut 0.5s';
+            setTimeout(() => warning.remove(), 500);
+        }
+    }, 10000);
 }
 
 function sendVoiceStatus(status) {
@@ -289,11 +725,11 @@ function updateVoiceStatus(status) {
             voiceIndicator.style.background = '#F44336';
             break;
         case 'ready':
-            voiceStatus.textContent = 'Voice: Gotowy';
+            voiceStatus.textContent = isUsingHeadphones ? 'Voice: Gotowy 🎧' : 'Voice: Gotowy 🔊';
             voiceIndicator.style.background = '#4CAF50';
             break;
         case 'active':
-            voiceStatus.textContent = 'Voice: Mówię 🎤';
+            voiceStatus.textContent = isUsingHeadphones ? 'Voice: Mówię 🎧' : 'Voice: Mówię 🔊';
             voiceIndicator.style.background = '#FF9800';
             break;
         case 'error':
@@ -380,6 +816,7 @@ function updateVoiceUsersList() {
             <div class="voice-user-indicator"></div>
             <span class="voice-user-name">${me.nickname} (Ty)</span>
             ${isVoiceActive ? '<span class="voice-mic-icon">🎤</span>' : ''}
+            ${isUsingHeadphones ? '<span class="headphone-icon">🎧</span>' : '<span class="speaker-icon">🔊</span>'}
         `;
         voiceUsersList.appendChild(myItem);
     }
@@ -502,7 +939,9 @@ function sendChatMessage() {
         }));
         
         chatInput.value = '';
-        chatInput.focus();
+        if (chatOpen) {
+            chatInput.focus();
+        }
     }
 }
 
@@ -580,7 +1019,7 @@ function updateUnreadBadge() {
     if (!unreadBadge) return;
     
     if (unreadMessages > 0) {
-        unreadBadge.textContent = unreadMessages;
+        unreadBadge.textContent = unreadMessages > 9 ? '9+' : unreadMessages;
         unreadBadge.style.display = 'flex';
     } else {
         unreadBadge.style.display = 'none';
@@ -591,13 +1030,13 @@ window.addEventListener("keydown", e => {
     const key = e.key.toLowerCase();
     keys[key] = true;
     
-    if (key === 'v' && isVoiceReady && !isVoiceActive) {
+    if (key === 'v' && isVoiceReady && !isVoiceActive && !keys.chatFocused) {
         e.preventDefault();
         startVoiceChat();
         return;
     }
     
-    if (key === 't') {
+    if (key === 't' && !keys.chatFocused) {
         e.preventDefault();
         toggleChat();
         return;
@@ -606,12 +1045,6 @@ window.addEventListener("keydown", e => {
     if (key === 'escape' && chatOpen) {
         e.preventDefault();
         closeChat();
-        return;
-    }
-    
-    if (key === 'enter' && chatOpen && chatInput && chatInput === document.activeElement) {
-        e.preventDefault();
-        sendChatMessage();
         return;
     }
 });
@@ -744,7 +1177,6 @@ ws.onmessage = (e) => {
                 break;
                 
             case "pong":
-                // Keep-alive
                 break;
         }
     } catch (err) {
@@ -770,6 +1202,15 @@ function update() {
         
         ws.send(JSON.stringify({ type: "move", dx, dy }));
     }
+    
+    const me = players.find(p => p.id === myId);
+    if (me) {
+        targetCameraX = canvas.width / 2 - me.x * zoom;
+        targetCameraY = canvas.height / 2 - me.y * zoom;
+        
+        cameraX += (targetCameraX - cameraX) * 0.1;
+        cameraY += (targetCameraY - cameraY) * 0.1;
+    }
 }
 
 function draw() {
@@ -780,59 +1221,59 @@ function draw() {
     if (!me) return;
     
     ctx.save();
-    const scale = 1 / zoom;
-    ctx.scale(scale, scale);
-    const offsetX = (canvas.width * (1 - 1/scale)) / 2;
-    const offsetY = (canvas.height * (1 - 1/scale)) / 2;
-    ctx.translate(offsetX, offsetY);
+    ctx.translate(cameraX, cameraY);
+    ctx.scale(zoom, zoom);
     
-    drawGrid(scale);
+    drawGrid();
     
     players.forEach(p => {
-        const x = (canvas.width / 2) / scale + (p.x - me.x) * zoom;
-        const y = (canvas.height / 2) / scale + (p.y - me.y) * zoom;
+        const x = p.x;
+        const y = p.y;
         
+        const screenX = x * zoom + cameraX;
+        const screenY = y * zoom + cameraY;
         const visibleRadius = p.r * zoom;
-        if (x + visibleRadius < 0 || x - visibleRadius > canvas.width / scale || 
-            y + visibleRadius < 0 || y - visibleRadius > canvas.height / scale) {
+        
+        if (screenX + visibleRadius < 0 || screenX - visibleRadius > canvas.width || 
+            screenY + visibleRadius < 0 || screenY - visibleRadius > canvas.height) {
             return;
         }
         
         ctx.beginPath();
-        ctx.arc(x, y, p.r * zoom, 0, Math.PI * 2);
+        ctx.arc(x, y, p.r, 0, Math.PI * 2);
         
         ctx.fillStyle = p.color || (p.id === myId ? playerColor : '#2196F3');
         ctx.fill();
         
-        ctx.lineWidth = 2 * zoom;
+        ctx.lineWidth = 2;
         ctx.strokeStyle = '#000';
         ctx.stroke();
         
         ctx.fillStyle = '#000';
-        ctx.font = `${Math.max(12, p.r * zoom / 2)}px Arial`;
+        ctx.font = `${Math.max(12, p.r / 2)}px Arial`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         
-        const displayName = p.r * zoom < 30 ? p.nickname?.substr(0, 3) : p.nickname;
+        const displayName = p.r < 30 ? p.nickname?.substr(0, 3) : p.nickname;
         ctx.fillText(displayName || "Player", x, y);
         
-        if (p.r * zoom > 25) {
-            ctx.font = `${Math.max(10, p.r * zoom / 3)}px Arial`;
+        if (p.r > 25) {
+            ctx.font = `${Math.max(10, p.r / 3)}px Arial`;
             ctx.fillStyle = '#333';
-            ctx.fillText(`${Math.round(p.r)}`, x, y + p.r * zoom / 2 + 10);
+            ctx.fillText(`${Math.round(p.r)}`, x, y + p.r / 2 + 10);
         }
         
         if (p.isSpeaking) {
             const pulse = (Math.sin(Date.now() / 200) + 1) * 0.3;
             ctx.beginPath();
-            ctx.arc(x, y, p.r * zoom + 10 + pulse * 5, 0, Math.PI * 2);
+            ctx.arc(x, y, p.r + 10 + pulse * 5, 0, Math.PI * 2);
             ctx.strokeStyle = `rgba(255, 152, 0, ${0.5 + pulse * 0.3})`;
             ctx.lineWidth = 3;
             ctx.stroke();
             
             ctx.fillStyle = '#FF9800';
             ctx.font = 'bold 20px Arial';
-            ctx.fillText('🎤', x, y - p.r * zoom - 15);
+            ctx.fillText('🎤', x, y - p.r - 15);
         }
     });
     
@@ -842,75 +1283,110 @@ function draw() {
     drawVoiceRange(me);
 }
 
-function drawGrid(scale) {
-    const gridSize = 50 * zoom;
-    const offsetX = ((canvas.width / scale) / 2) % gridSize;
-    const offsetY = ((canvas.height / scale) / 2) % gridSize;
+function drawGrid() {
+    const gridSize = 50;
+    const offsetX = Math.abs(cameraX) % (gridSize * zoom);
+    const offsetY = Math.abs(cameraY) % (gridSize * zoom);
     
     ctx.strokeStyle = '#e0e0e0';
     ctx.lineWidth = 1;
     
-    for (let x = offsetX; x < canvas.width / scale; x += gridSize) {
+    const startX = -cameraX / zoom - offsetX;
+    const endX = startX + canvas.width / zoom + gridSize;
+    const startY = -cameraY / zoom - offsetY;
+    const endY = startY + canvas.height / zoom + gridSize;
+    
+    for (let x = startX; x < endX; x += gridSize) {
         ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, canvas.height / scale);
+        ctx.moveTo(x, startY);
+        ctx.lineTo(x, endY);
         ctx.stroke();
     }
     
-    for (let y = offsetY; y < canvas.height / scale; y += gridSize) {
+    for (let y = startY; y < endY; y += gridSize) {
         ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(canvas.width / scale, y);
+        ctx.moveTo(startX, y);
+        ctx.lineTo(endX, y);
         ctx.stroke();
     }
 }
 
 function drawMinimap(me) {
-    const minimapSize = 150;
-    const margin = 20;
+    const minimapSize = 180;
+    const margin = 25;
     const scale = minimapSize / mapSize;
     
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-    ctx.fillRect(margin, margin, minimapSize, minimapSize);
-    ctx.strokeStyle = '#000';
-    ctx.strokeRect(margin, margin, minimapSize, minimapSize);
+    ctx.save();
+    
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+    ctx.shadowBlur = 15;
+    ctx.shadowOffsetX = 5;
+    ctx.shadowOffsetY = 5;
+    
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+    ctx.fillRect(canvas.width - minimapSize - margin, margin, minimapSize, minimapSize);
+    
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+    
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(canvas.width - minimapSize - margin, margin, minimapSize, minimapSize);
     
     players.forEach(p => {
-        const x = margin + p.x * scale;
+        const x = canvas.width - minimapSize - margin + p.x * scale;
         const y = margin + p.y * scale;
-        const r = Math.max(2, p.r * scale * 0.3);
+        const r = Math.max(3, p.r * scale * 0.3);
         
         ctx.beginPath();
         ctx.arc(x, y, r, 0, Math.PI * 2);
         ctx.fillStyle = p.id === myId ? playerColor : '#2196F3';
         ctx.fill();
+        
+        if (p.id === myId) {
+            ctx.strokeStyle = '#FF0000';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
     });
     
-    const myX = margin + me.x * scale;
-    const myY = margin + me.y * scale;
-    ctx.beginPath();
-    ctx.arc(myX, myY, Math.max(3, me.r * scale * 0.3) + 2, 0, Math.PI * 2);
-    ctx.strokeStyle = '#FF0000';
-    ctx.lineWidth = 2;
-    ctx.stroke();
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+    ctx.fillRect(canvas.width - minimapSize - margin, margin + minimapSize + 5, minimapSize, 25);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 12px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`ZOOM: ${zoom.toFixed(1)}x`, canvas.width - minimapSize - margin + minimapSize/2, margin + minimapSize + 17);
+    
+    ctx.restore();
 }
 
 function drawVoiceRange(me) {
+    ctx.save();
+    
+    ctx.globalAlpha = 0.2;
     ctx.beginPath();
     ctx.arc(canvas.width/2, canvas.height/2, voiceRange * zoom, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(33, 150, 243, 0.3)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.fillStyle = 'rgba(33, 150, 243, 0.1)';
+    ctx.fillStyle = '#2196F3';
     ctx.fill();
     
+    ctx.globalAlpha = 0.5;
+    ctx.strokeStyle = '#2196F3';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    ctx.restore();
+    
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(20, canvas.height - 40, 120, 30);
-    ctx.fillStyle = '#fff';
-    ctx.font = '12px Arial';
+    ctx.fillRect(20, canvas.height - 50, 150, 35);
+    ctx.fillStyle = isUsingHeadphones ? '#4CAF50' : '#FF9800';
+    ctx.font = 'bold 14px Arial';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`Voice: ${voiceConnections.size} graczy`, 30, canvas.height - 25);
+    ctx.fillText(`VOICE: ${voiceConnections.size}`, 30, canvas.height - 32);
+    ctx.fillText(isUsingHeadphones ? '🎧 SLUCHAWKI' : '🔊 GLOSNIKI', 100, canvas.height - 32);
 }
 
 function updateHUD() {
@@ -930,6 +1406,11 @@ function updateHUD() {
     const me = players.find(p => p.id === myId);
     if (me && playerSizeElement) {
         playerSizeElement.textContent = Math.round(me.r);
+    }
+    
+    const voiceCountElement = document.getElementById('voiceCount');
+    if (voiceCountElement) {
+        voiceCountElement.textContent = voiceConnections.size;
     }
 }
 
@@ -962,7 +1443,6 @@ window.addEventListener('beforeunload', () => {
     }
 });
 
-// Regular ping do serwera
 setInterval(() => {
     if (ws.readyState === WebSocket.OPEN && myId) {
         ws.send(JSON.stringify({
@@ -970,3 +1450,51 @@ setInterval(() => {
         }));
     }
 }, 25000);
+
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    @keyframes fadeOut {
+        from { opacity: 1; }
+        to { opacity: 0; }
+    }
+    
+    @keyframes slideInUp {
+        from { 
+            opacity: 0;
+            transform: translateY(50px);
+        }
+        to { 
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    @keyframes slideOutDown {
+        from { 
+            opacity: 1;
+            transform: translateY(0);
+        }
+        to { 
+            opacity: 0;
+            transform: translateY(50px);
+        }
+    }
+    
+    .headphone-icon {
+        color: #4CAF50;
+        font-size: 0.9rem;
+        margin-left: 5px;
+    }
+    
+    .speaker-icon {
+        color: #FF9800;
+        font-size: 0.9rem;
+        margin-left: 5px;
+    }
+`;
+document.head.appendChild(style);
