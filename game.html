@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agario Multiplayer - Rozgrywka</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <canvas id="game"></canvas>
+        
+        <div class="hud">
+            <div class="player-info">
+                <div class="player-circle" id="playerCircle"></div>
+                <div class="player-stats">
+                    <div class="player-name" id="playerName"></div>
+                    <div class="player-size">Rozmiar: <span id="playerSize">20</span></div>
+                </div>
+            </div>
+            
+            <div class="game-stats">
+                <div class="stat">
+                    <span class="stat-label">Graczy online:</span>
+                    <span class="stat-value" id="playersOnline">1</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Ranking:</span>
+                    <span class="stat-value" id="playerRank">1</span>
+                </div>
+            </div>
+            
+            <button id="menuBtn" class="menu-btn">⟲ Menu</button>
+        </div>
+        
+        <div class="controls-hint">
+            🎮 Użyj WASD lub strzałek do poruszania
+        </div>
+    </div>
+    
+    <script src="game.js"></script>
+    <script>
+        // Przycisk powrotu do menu
+        document.getElementById('menuBtn').addEventListener('click', () => {
+            if (confirm('Czy na pewno chcesz wrócić do menu? Stracisz obecną grę.')) {
+                window.location.href = 'index.html';
+            }
+        });
+        
+        // Pobierz dane gracza z localStorage
+        const playerData = JSON.parse(localStorage.getItem('playerData') || '{}');
+        
+        // Jeśli nie ma danych, wróć do menu
+        if (!playerData.nickname) {
+            window.location.href = 'index.html';
+        } else {
+            // Ustaw informacje gracza w HUD
+            document.getElementById('playerName').textContent = playerData.nickname;
+            document.getElementById('playerCircle').style.background = playerData.color;
+        }
+    </script>
+</body>
+</html>
