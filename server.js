@@ -4,13 +4,13 @@ const wss = new WebSocket.Server({ port: PORT });
 
 const players = {};
 const chatHistory = [];
-const voiceSessions = new Map();
+const voiceSessions = new Map(); // Map<playerId, {targets: Set<playerId>, audioQueue: Array}>
 const MAX_CHAT_HISTORY = 100;
 const MAP_SIZE = 5000;
 const MAX_RADIUS = 100;
 const INITIAL_RADIUS = 20;
 const SPEED_FACTOR = 3;
-const VOICE_RANGE = 200;
+const VOICE_RANGE = 200; // 20 metrów w skali gry
 
 function randomPos() {
     return Math.random() * MAP_SIZE;
@@ -37,15 +37,22 @@ function updateVoiceConnections(playerId) {
     });
     
     if (!voiceSessions.has(playerId)) {
-        voiceSessions.set(playerId, { targets: new Set() });
+        voiceSessions.set(playerId, { 
+            targets: new Set(),
+            audioQueue: []
+        });
     }
     
     const session = voiceSessions.get(playerId);
     const oldTargets = new Set(session.targets);
     const newTargets = new Set(nearbyPlayers.map(p => p.id));
     
+    // Dodaj nowe połączenia
     newTargets.forEach(targetId => {
         if (!oldTargets.has(targetId)) {
+            console.log(`Voice: ${playerId} -> ${targetId} CONNECTED`);
+            
+            // Powiadom obu graczy o połączeniu
             sendToPlayer(playerId, {
                 type: 'voiceConnect',
                 playerId: targetId,
@@ -53,8 +60,19 @@ function updateVoiceConnections(playerId) {
                 distance: getDistance(player, players[targetId])
             });
             
+            sendToPlayer(targetId, {
+                type: 'voiceConnect',
+                playerId: playerId,
+                nickname: player.nickname,
+                distance: getDistance(players[targetId], player)
+            });
+            
+            // Utwórz sesję dla targeta jeśli nie istnieje
             if (!voiceSessions.has(targetId)) {
-                voiceSessions.set(targetId, { targets: new Set() });
+                voiceSessions.set(targetId, { 
+                    targets: new Set(),
+                    audioQueue: []
+                });
             }
             voiceSessions.get(targetId).targets.add(playerId);
             
@@ -62,21 +80,33 @@ function updateVoiceConnections(playerId) {
         }
     });
     
+    // Usuń stare połączenia
     oldTargets.forEach(targetId => {
         if (!newTargets.has(targetId)) {
+            console.log(`Voice: ${playerId} -> ${targetId} DISCONNECTED`);
+            
             sendToPlayer(playerId, {
                 type: 'voiceDisconnect',
                 playerId: targetId
             });
             
+            sendToPlayer(targetId, {
+                type: 'voiceDisconnect',
+                playerId: playerId
+            });
+            
             if (voiceSessions.has(targetId)) {
                 voiceSessions.get(targetId).targets.delete(playerId);
+                if (voiceSessions.get(targetId).targets.size === 0) {
+                    voiceSessions.delete(targetId);
+                }
             }
             
             session.targets.delete(targetId);
         }
     });
     
+    // Jeśli nie ma targetów, usuń sesję
     if (session.targets.size === 0) {
         voiceSessions.delete(playerId);
     }
@@ -101,13 +131,16 @@ function sendToPlayer(playerId, data) {
     }
 }
 
-function broadcastAudio(fromPlayerId, audioData, sequence) {
+function broadcastAudio(fromPlayerId, audioData) {
     const player = players[fromPlayerId];
     if (!player) return;
     
     const session = voiceSessions.get(fromPlayerId);
     if (!session) return;
     
+    console.log(`Voice: Broadcasting audio from ${fromPlayerId} to ${session.targets.size} players`);
+    
+    // Wyślij audio do wszystkich graczy w zasięgu
     session.targets.forEach(targetId => {
         const target = players[targetId];
         if (target) {
@@ -119,9 +152,9 @@ function broadcastAudio(fromPlayerId, audioData, sequence) {
                 from: fromPlayerId,
                 nickname: player.nickname,
                 audio: audioData,
-                sequence: sequence,
                 volume: volume,
-                distance: distance
+                distance: Math.round(distance/10),
+                timestamp: Date.now()
             });
         }
     });
@@ -130,6 +163,8 @@ function broadcastAudio(fromPlayerId, audioData, sequence) {
 wss.on('connection', ws => {
     let playerId = null;
     let nickname = "Player";
+    
+    console.log('New WebSocket connection');
     
     ws.on('message', msg => {
         try {
@@ -178,7 +213,7 @@ wss.on('connection', ws => {
                     voiceRange: VOICE_RANGE
                 });
                 
-                console.log(`Player ${nickname} (${playerId}) joined`);
+                console.log(`Player ${nickname} (${playerId}) joined, total players: ${Object.keys(players).length}`);
             }
             
             if (data.type === 'move' && playerId && players[playerId]) {
@@ -251,6 +286,8 @@ wss.on('connection', ws => {
                                     eater: playerId,
                                     eaten: other.id
                                 });
+                                
+                                console.log(`Player ${other.nickname} was eaten by ${player.nickname}`);
                             }
                         }
                     }
@@ -302,7 +339,10 @@ wss.on('connection', ws => {
             }
             
             if (data.type === 'voiceAudio' && playerId && players[playerId]) {
-                broadcastAudio(playerId, data.audio, data.sequence);
+                // Sprawdź czy audio nie jest puste
+                if (data.audio && data.audio.length > 100) {
+                    broadcastAudio(playerId, data.audio);
+                }
             }
             
             if (data.type === 'voiceStatus' && playerId && players[playerId]) {
@@ -322,12 +362,22 @@ wss.on('connection', ws => {
                 }
             }
             
+            if (data.type === 'ping') {
+                // Odpowiedz na ping
+                sendToPlayer(playerId, {
+                    type: 'pong',
+                    timestamp: Date.now()
+                });
+            }
+            
         } catch (err) {
             console.error('Error processing message:', err);
         }
     });
     
     ws.on('close', () => {
+        console.log(`WebSocket closed for player ${playerId}`);
+        
         if (playerId && players[playerId]) {
             const playerName = players[playerId].nickname;
             
@@ -356,7 +406,7 @@ wss.on('connection', ws => {
             
             broadcast(goodbyeMessage, playerId);
             
-            console.log(`Player ${playerName} (${playerId}) disconnected`);
+            console.log(`Player ${playerName} (${playerId}) disconnected, remaining: ${Object.keys(players).length - 1}`);
             delete players[playerId];
         }
     });
@@ -364,6 +414,15 @@ wss.on('connection', ws => {
     ws.on('error', (err) => {
         console.error('WebSocket error:', err);
     });
+    
+    // Wysyłaj regularny ping do klienta
+    const pingInterval = setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+            ws.ping();
+        } else {
+            clearInterval(pingInterval);
+        }
+    }, 30000);
 });
 
 setInterval(() => {
@@ -380,4 +439,5 @@ setInterval(() => {
     });
 }, 50);
 
-console.log(`✅ Server started on port ${PORT} (Voice Chat enabled)`);
+console.log(`✅ Server started on port ${PORT}`);
+console.log(`🎤 Voice Chat enabled with ${VOICE_RANGE/10}m range`);
