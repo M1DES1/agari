@@ -1,11 +1,16 @@
 {
-"name": "agar-multiplayer",
-"version": "1.0.0",
-"main": "server.js",
-"scripts": {
-"start": "node server.js"
-},
-"dependencies": {
-"ws": "^8.0.0"
-}
+  "name": "agario-multiplayer",
+  "version": "2.0.0",
+  "description": "Ulepszona wersja multiplayer Agario",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "ws": "^8.0.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
 }
