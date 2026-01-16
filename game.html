@@ -122,6 +122,269 @@
         </div>
     </div>
     
+    <!-- Panel uprawnień dźwięku -->
+    <div id="audioPermissionModal" class="permission-modal" style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.85);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 10001;
+        font-family: Arial, sans-serif;
+    ">
+        <div style="
+            background: linear-gradient(135deg, #1a237e 0%, #311b92 100%);
+            padding: 40px;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            color: white;
+            border: 2px solid #3949ab;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+            animation: slideInUp 0.5s ease-out;
+        ">
+            <div style="font-size: 4rem; margin-bottom: 20px;">
+                🔊
+            </div>
+            
+            <h2 style="margin: 0 0 20px 0; font-size: 2rem; color: #bb86fc;">
+                Uprawnienie do dźwięku
+            </h2>
+            
+            <div style="
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 15px;
+                padding: 25px;
+                margin-bottom: 30px;
+                text-align: left;
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+            ">
+                <h3 style="margin: 0 0 15px 0; color: #bb86fc; font-size: 1.3rem;">
+                    <i class="fas fa-volume-up"></i> Wymagane uprawnienie
+                </h3>
+                <p style="margin: 0; line-height: 1.6; font-size: 1.1rem; color: #e1e1e1;">
+                    Aby słyszeć innych graczy przez voice chat, musisz zezwolić tej stronie na 
+                    <strong style="color: #bb86fc;">odtwarzanie dźwięku</strong>.
+                    <br><br>
+                    Dźwięk jest potrzebny do:
+                </p>
+                <ul style="margin: 15px 0 0 0; padding-left: 20px; color: #e1e1e1;">
+                    <li>Słyszenia innych graczy przez voice chat</li>
+                    <li>Efektów dźwiękowych w grze</li>
+                    <li>Komunikacji głosowej z innymi graczami</li>
+                </ul>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px;">
+                <div style="display: flex; align-items: center; gap: 20px; background: rgba(76, 175, 80, 0.2); padding: 20px; border-radius: 15px; border-left: 5px solid #4CAF50;">
+                    <div style="font-size: 2rem;">✅</div>
+                    <div style="text-align: left; flex: 1;">
+                        <div style="font-weight: bold; font-size: 1.2rem; color: #4CAF50; margin-bottom: 5px;">
+                            Po włączeniu dźwięku:
+                        </div>
+                        <div style="font-size: 0.95rem; color: #c8e6c9;">
+                            Będziesz słyszeć innych graczy • Voice chat będzie działać • Lepsze doświadczenie gry
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="display: flex; align-items: center; gap: 20px; background: rgba(255, 152, 0, 0.2); padding: 20px; border-radius: 15px; border-left: 5px solid #FF9800;">
+                    <div style="font-size: 2rem;">⚠️</div>
+                    <div style="text-align: left; flex: 1;">
+                        <div style="font-weight: bold; font-size: 1.2rem; color: #FF9800; margin-bottom: 5px;">
+                            Bez dźwięku:
+                        </div>
+                        <div style="font-size: 0.95rem; color: #ffe0b2;">
+                            Nie usłyszysz innych graczy • Voice chat będzie nieskuteczny • Ograniczone funkcje gry
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                <button id="allowAudioBtn" style="
+                    background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+                    color: white;
+                    border: none;
+                    padding: 20px 30px;
+                    border-radius: 15px;
+                    font-size: 1.3rem;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 15px;
+                    transition: all 0.3s;
+                    font-weight: bold;
+                    box-shadow: 0 10px 20px rgba(76, 175, 80, 0.3);
+                ">
+                    <span style="font-size: 1.5rem;">🔊</span>
+                    <span>Zezwól na odtwarzanie dźwięku</span>
+                </button>
+                
+                <button id="skipAudioBtn" style="
+                    background: linear-gradient(135deg, #757575 0%, #424242 100%);
+                    color: white;
+                    border: none;
+                    padding: 18px 30px;
+                    border-radius: 15px;
+                    font-size: 1.1rem;
+                    cursor: pointer;
+                    transition: all 0.3s;
+                ">
+                    <span>Pomiń na razie</span>
+                </button>
+            </div>
+            
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.2);">
+                <p style="margin: 0; font-size: 0.9rem; color: #bb86fc;">
+                    <i class="fas fa-info-circle"></i> 
+                    Możesz zmienić to ustawienie klikając ikonę kłódki 🔒 w pasku adresu
+                </p>
+            </div>
+        </div>
+    </div>
+    
     <script src="game.js"></script>
+    <script>
+    // Skrypt dla modal uprawnień dźwięku
+    document.addEventListener('DOMContentLoaded', function() {
+        const audioPermissionModal = document.getElementById('audioPermissionModal');
+        const allowAudioBtn = document.getElementById('allowAudioBtn');
+        const skipAudioBtn = document.getElementById('skipAudioBtn');
+        
+        // Pokaż modal uprawnień dźwięku
+        function showAudioPermissionModal() {
+            setTimeout(() => {
+                audioPermissionModal.style.display = 'flex';
+            }, 1500);
+        }
+        
+        // Przycisk "Zezwól na dźwięk"
+        allowAudioBtn.addEventListener('click', async function() {
+            this.innerHTML = '<span style="font-size: 1.5rem;">⏳</span> <span>Sprawdzanie...</span>';
+            this.disabled = true;
+            
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                if (audioContext.state === 'suspended') {
+                    await audioContext.resume();
+                }
+                
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                gainNode.gain.value = 0.001;
+                oscillator.frequency.value = 440;
+                oscillator.type = 'sine';
+                
+                oscillator.start();
+                setTimeout(() => oscillator.stop(), 100);
+                
+                localStorage.setItem('audioPermission', 'granted');
+                
+                this.innerHTML = '<span style="font-size: 1.5rem;">✅</span> <span>Dźwięk włączony!</span>';
+                this.style.background = 'linear-gradient(135deg, #2E7D32 0%, #1B5E20 100%)';
+                
+                setTimeout(() => {
+                    audioPermissionModal.style.animation = 'fadeOut 0.5s ease-out';
+                    setTimeout(() => {
+                        audioPermissionModal.style.display = 'none';
+                        audioPermissionModal.style.animation = '';
+                    }, 500);
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Błąd przyznawania uprawnień dźwięku:', error);
+                this.innerHTML = '<span style="font-size: 1.5rem;">❌</span> <span>Błąd - spróbuj ponownie</span>';
+                this.style.background = 'linear-gradient(135deg, #F44336 0%, #D32F2F 100%)';
+                
+                setTimeout(() => {
+                    this.innerHTML = '<span style="font-size: 1.5rem;">🔊</span> <span>Zezwól na odtwarzanie dźwięku</span>';
+                    this.style.background = 'linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)';
+                    this.disabled = false;
+                }, 2000);
+            }
+        });
+        
+        // Przycisk "Pomiń"
+        skipAudioBtn.addEventListener('click', function() {
+            localStorage.setItem('audioPermission', 'skipped');
+            audioPermissionModal.style.animation = 'fadeOut 0.5s ease-out';
+            setTimeout(() => {
+                audioPermissionModal.style.display = 'none';
+                audioPermissionModal.style.animation = '';
+            }, 500);
+        });
+        
+        // Sprawdź czy trzeba pokazać modal
+        setTimeout(() => {
+            const audioPermission = localStorage.getItem('audioPermission');
+            if (!audioPermission || audioPermission === 'skipped') {
+                showAudioPermissionModal();
+            }
+        }, 1000);
+        
+        // Hover efekty
+        allowAudioBtn.addEventListener('mouseenter', function() {
+            if (!this.disabled) {
+                this.style.transform = 'translateY(-5px) scale(1.02)';
+                this.style.boxShadow = '0 15px 30px rgba(76, 175, 80, 0.4)';
+            }
+        });
+        
+        allowAudioBtn.addEventListener('mouseleave', function() {
+            if (!this.disabled) {
+                this.style.transform = 'translateY(0) scale(1)';
+                this.style.boxShadow = '0 10px 20px rgba(76, 175, 80, 0.3)';
+            }
+        });
+        
+        skipAudioBtn.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px)';
+            this.style.boxShadow = '0 8px 15px rgba(0,0,0,0.2)';
+        });
+        
+        skipAudioBtn.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = 'none';
+        });
+    });
+    
+    // Dodaj CSS dla animacji
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .permission-modal {
+            animation: slideInUp 0.5s ease-out;
+        }
+    `;
+    document.head.appendChild(style);
+    </script>
 </body>
 </html>
