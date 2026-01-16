@@ -26,12 +26,24 @@
                     <span class="stat-value" id="playersOnline">1</span>
                 </div>
                 <div class="stat">
+                    <span class="stat-label">Voice Chat:</span>
+                    <span class="stat-value" id="voiceCount">0</span>
+                </div>
+                <div class="stat">
                     <span class="stat-label">Ranking:</span>
                     <span class="stat-value" id="playerRank">1</span>
                 </div>
             </div>
             
-            <div class="chat-toggle" id="chatToggle" title="Otwórz/zamknij czat">
+            <div class="voice-controls">
+                <button id="voiceToggle" class="voice-btn" title="Voice Chat (V)">
+                    <i class="fas fa-microphone"></i>
+                </button>
+                <div class="voice-status" id="voiceStatus">Voice Chat: Ładowanie...</div>
+                <div class="voice-indicator" id="voiceIndicator"></div>
+            </div>
+            
+            <div class="chat-toggle" id="chatToggle" title="Czat (T)">
                 <i class="fas fa-comments"></i>
                 <span class="unread-badge" id="unreadBadge">0</span>
             </div>
@@ -79,14 +91,39 @@
             </div>
         </div>
         
+        <!-- Panel voice chatu -->
+        <div class="voice-panel" id="voicePanel">
+            <div class="voice-header">
+                <h3><i class="fas fa-microphone"></i> Voice Chat</h3>
+                <div class="voice-range-info">
+                    Zasięg: <span id="voiceRangeInfo">20m</span>
+                </div>
+            </div>
+            
+            <div class="voice-users" id="voiceUsersList">
+                <!-- Gracze w zasięgu będą dodawani dynamicznie -->
+            </div>
+            
+            <div class="voice-instructions">
+                <div class="instruction">
+                    <span class="key">V</span>
+                    <span>Przytrzymaj do mówienia</span>
+                </div>
+                <div class="instruction">
+                    <span class="key">Klik</span>
+                    <span>Przełącz voice chat</span>
+                </div>
+            </div>
+        </div>
+        
         <div class="controls-hint">
-            <i class="fas fa-keyboard"></i> WASD/Strzałki - ruch | 
-            <i class="fas fa-comment"></i> T - otwórz czat |
-            <i class="fas fa-arrows-alt"></i> Scroll - powiększ
+            <i class="fas fa-keyboard"></i> WASD - ruch | 
+            <i class="fas fa-microphone"></i> V - mów | 
+            <i class="fas fa-comment"></i> T - czat |
+            <i class="fas fa-arrows-alt"></i> Scroll - zoom
         </div>
     </div>
     
     <script src="game.js"></script>
-    <!-- USUŃ TĘ SEKCIĘ SKRYPTU - PRZENIEŚ DO game.js -->
 </body>
 </html>
