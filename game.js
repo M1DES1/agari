@@ -30,6 +30,7 @@ let audioContext = null;
 let audioElements = new Map();
 let voiceConnections = new Set();
 let voiceSequence = 0;
+let isVoiceReady = false;
 
 let chatPanel, chatMessages, chatInput, chatSend, chatToggle, chatClose, unreadBadge;
 let voiceToggle, voiceStatus, voiceIndicator, voiceUsersList;
@@ -111,21 +112,43 @@ async function initVoiceChat() {
         
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             updateVoiceStatus('unavailable');
+            addChatMessage({
+                type: 'chat',
+                sender: 'SYSTEM',
+                message: '⚠️ Twoja przeglądarka nie obsługuje voice chatu',
+                color: '#FF9800',
+                timestamp: Date.now()
+            });
             return;
         }
         
+        console.log('Requesting microphone access...');
         voiceStream = await navigator.mediaDevices.getUserMedia({
             audio: {
                 echoCancellation: true,
                 noiseSuppression: true,
-                autoGainControl: true
-            }
+                autoGainControl: true,
+                channelCount: 1,
+                sampleRate: 16000
+            },
+            video: false
         });
         
-        console.log('Microphone access granted');
+        console.log('Microphone access granted!');
         updateVoiceStatus('ready');
+        isVoiceReady = true;
         
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        audioContext = new (window.AudioContext || window.webkitAudioContext)({
+            sampleRate: 16000
+        });
+        
+        addChatMessage({
+            type: 'chat',
+            sender: 'SYSTEM',
+            message: '✅ Voice chat gotowy! Naciśnij V aby mówić',
+            color: '#4CAF50',
+            timestamp: Date.now()
+        });
         
     } catch (error) {
         console.error('Error accessing microphone:', error);
@@ -134,7 +157,7 @@ async function initVoiceChat() {
         addChatMessage({
             type: 'chat',
             sender: 'SYSTEM',
-            message: '❌ Voice chat niedostępny. Sprawdź uprawnienia mikrofonu.',
+            message: '❌ Brak dostępu do mikrofonu. Sprawdź uprawnienia.',
             color: '#F44336',
             timestamp: Date.now()
         });
@@ -142,7 +165,7 @@ async function initVoiceChat() {
 }
 
 async function toggleVoiceChat() {
-    if (!voiceStream) {
+    if (!isVoiceReady) {
         await initVoiceChat();
         return;
     }
@@ -158,34 +181,43 @@ function startVoiceChat() {
     if (!voiceStream || isVoiceActive) return;
     
     try {
-        mediaRecorder = new MediaRecorder(voiceStream);
+        // Użyj opus codec jeśli dostępny
+        const options = {
+            mimeType: 'audio/webm;codecs=opus',
+            audioBitsPerSecond: 16000
+        };
         
-        let audioChunks = [];
+        if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+            options.mimeType = 'audio/webm';
+        }
         
-        mediaRecorder.ondataavailable = (event) => {
+        mediaRecorder = new MediaRecorder(voiceStream, options);
+        
+        mediaRecorder.ondataavailable = async (event) => {
             if (event.data.size > 0) {
-                audioChunks.push(event.data);
-                
-                const blob = new Blob(audioChunks, { type: 'audio/webm; codecs=opus' });
-                const reader = new FileReader();
-                
-                reader.onloadend = () => {
-                    const base64Audio = reader.result.split(',')[1];
+                try {
+                    const arrayBuffer = await event.data.arrayBuffer();
+                    const base64Audio = arrayBufferToBase64(arrayBuffer);
                     
-                    if (ws.readyState === WebSocket.OPEN && myId) {
+                    if (ws.readyState === WebSocket.OPEN && myId && base64Audio.length > 100) {
                         ws.send(JSON.stringify({
                             type: 'voiceAudio',
                             audio: base64Audio,
                             sequence: voiceSequence++
                         }));
                     }
-                };
-                
-                reader.readAsDataURL(blob);
-                audioChunks = [];
+                } catch (error) {
+                    console.error('Error processing audio:', error);
+                }
             }
         };
         
+        mediaRecorder.onerror = (error) => {
+            console.error('MediaRecorder error:', error);
+            updateVoiceStatus('error');
+        };
+        
+        // Nagrywaj w 100ms chunkach dla lepszej responsywności
         mediaRecorder.start(100);
         isVoiceActive = true;
         
@@ -194,12 +226,24 @@ function startVoiceChat() {
         
         if (voiceToggle) {
             voiceToggle.classList.add('active');
+            voiceToggle.innerHTML = '<i class="fas fa-microphone-slash"></i>';
         }
+        
+        console.log('Voice chat started');
         
     } catch (error) {
         console.error('Error starting voice chat:', error);
         updateVoiceStatus('error');
     }
+}
+
+function arrayBufferToBase64(buffer) {
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
 }
 
 function stopVoiceChat() {
@@ -212,7 +256,10 @@ function stopVoiceChat() {
         
         if (voiceToggle) {
             voiceToggle.classList.remove('active');
+            voiceToggle.innerHTML = '<i class="fas fa-microphone"></i>';
         }
+        
+        console.log('Voice chat stopped');
     }
 }
 
@@ -246,7 +293,7 @@ function updateVoiceStatus(status) {
             voiceIndicator.style.background = '#4CAF50';
             break;
         case 'active':
-            voiceStatus.textContent = 'Voice: Aktywny 🎤';
+            voiceStatus.textContent = 'Voice: Mówię 🎤';
             voiceIndicator.style.background = '#FF9800';
             break;
         case 'error':
@@ -257,26 +304,59 @@ function updateVoiceStatus(status) {
 }
 
 function playVoiceAudio(fromPlayerId, audioData, volume = 1.0) {
-    if (!audioContext || audioContext.state === 'suspended') {
-        audioContext.resume();
-    }
-    
-    let audioElement = audioElements.get(fromPlayerId);
-    
-    if (!audioElement) {
-        audioElement = new Audio();
-        audioElement.autoplay = true;
-        audioElements.set(fromPlayerId, audioElement);
-    }
-    
-    audioElement.volume = Math.max(0.1, Math.min(1.0, volume));
-    audioElement.src = `data:audio/webm;base64,${audioData}`;
-    
-    showVoiceActivity(fromPlayerId, true);
-    
-    audioElement.onended = () => {
+    try {
+        if (!audioContext || audioContext.state === 'closed') {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        
+        if (audioContext.state === 'suspended') {
+            audioContext.resume();
+        }
+        
+        let audioElement = audioElements.get(fromPlayerId);
+        
+        if (!audioElement) {
+            audioElement = new Audio();
+            audioElement.autoplay = true;
+            audioElements.set(fromPlayerId, audioElement);
+        }
+        
+        const adjustedVolume = Math.max(0.1, Math.min(1.0, volume * 0.7));
+        audioElement.volume = adjustedVolume;
+        
+        const audioBlob = base64ToBlob(audioData, 'audio/webm');
+        const audioUrl = URL.createObjectURL(audioBlob);
+        
+        audioElement.src = audioUrl;
+        
+        showVoiceActivity(fromPlayerId, true);
+        
+        audioElement.onended = () => {
+            showVoiceActivity(fromPlayerId, false);
+            URL.revokeObjectURL(audioUrl);
+        };
+        
+        audioElement.onerror = () => {
+            showVoiceActivity(fromPlayerId, false);
+            URL.revokeObjectURL(audioUrl);
+        };
+        
+    } catch (error) {
+        console.error('Error playing audio:', error);
         showVoiceActivity(fromPlayerId, false);
-    };
+    }
+}
+
+function base64ToBlob(base64, mimeType) {
+    const byteCharacters = atob(base64);
+    const byteNumbers = new Array(byteCharacters.length);
+    
+    for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    
+    const byteArray = new Uint8Array(byteNumbers);
+    return new Blob([byteArray], { type: mimeType });
 }
 
 function showVoiceActivity(playerId, isSpeaking) {
@@ -320,49 +400,57 @@ function updateVoiceUsersList() {
 }
 
 function handleVoiceConnect(playerId, nickname, distance) {
-    voiceConnections.add(playerId);
-    
-    addChatMessage({
-        type: 'chat',
-        sender: 'SYSTEM',
-        message: `🔊 ${nickname} jest w zasięgu voice chatu (${Math.round(distance/10)}m)`,
-        color: '#2196F3',
-        timestamp: Date.now()
-    });
-    
-    updateVoiceUsersList();
-    
-    const voiceCountElement = document.getElementById('voiceCount');
-    if (voiceCountElement) {
-        voiceCountElement.textContent = voiceConnections.size;
+    if (!voiceConnections.has(playerId)) {
+        voiceConnections.add(playerId);
+        
+        addChatMessage({
+            type: 'chat',
+            sender: 'SYSTEM',
+            message: `🔊 ${nickname} jest w zasięgu voice chatu (${Math.round(distance/10)}m)`,
+            color: '#2196F3',
+            timestamp: Date.now()
+        });
+        
+        updateVoiceUsersList();
+        
+        const voiceCountElement = document.getElementById('voiceCount');
+        if (voiceCountElement) {
+            voiceCountElement.textContent = voiceConnections.size;
+        }
+        
+        console.log(`Voice connected to ${nickname}`);
     }
 }
 
 function handleVoiceDisconnect(playerId) {
-    const player = players.find(p => p.id === playerId);
-    if (player) {
-        addChatMessage({
-            type: 'chat',
-            sender: 'SYSTEM',
-            message: `🔇 ${player.nickname} wyszedł poza zasięg`,
-            color: '#FF9800',
-            timestamp: Date.now()
-        });
-    }
-    
-    voiceConnections.delete(playerId);
-    
-    const audioElement = audioElements.get(playerId);
-    if (audioElement) {
-        audioElement.pause();
-        audioElements.delete(playerId);
-    }
-    
-    updateVoiceUsersList();
-    
-    const voiceCountElement = document.getElementById('voiceCount');
-    if (voiceCountElement) {
-        voiceCountElement.textContent = voiceConnections.size;
+    if (voiceConnections.has(playerId)) {
+        const player = players.find(p => p.id === playerId);
+        if (player) {
+            addChatMessage({
+                type: 'chat',
+                sender: 'SYSTEM',
+                message: `🔇 ${player.nickname} wyszedł poza zasięg`,
+                color: '#FF9800',
+                timestamp: Date.now()
+            });
+        }
+        
+        voiceConnections.delete(playerId);
+        
+        const audioElement = audioElements.get(playerId);
+        if (audioElement) {
+            audioElement.pause();
+            audioElements.delete(playerId);
+        }
+        
+        updateVoiceUsersList();
+        
+        const voiceCountElement = document.getElementById('voiceCount');
+        if (voiceCountElement) {
+            voiceCountElement.textContent = voiceConnections.size;
+        }
+        
+        console.log(`Voice disconnected from ${playerId}`);
     }
 }
 
@@ -503,7 +591,7 @@ window.addEventListener("keydown", e => {
     const key = e.key.toLowerCase();
     keys[key] = true;
     
-    if (key === 'v' && voiceStream && !isVoiceActive) {
+    if (key === 'v' && isVoiceReady && !isVoiceActive) {
         e.preventDefault();
         startVoiceChat();
         return;
@@ -543,7 +631,12 @@ ws.onopen = () => {
     
     initDOM();
     initChat();
-    initVoiceChat();
+    
+    if (playerData.allowVoice !== false) {
+        initVoiceChat();
+    } else {
+        updateVoiceStatus('disabled');
+    }
     
     ws.send(JSON.stringify({
         type: "join",
@@ -551,7 +644,16 @@ ws.onopen = () => {
     }));
 };
 
-ws.onerror = (e) => console.error("❌ WebSocket error", e);
+ws.onerror = (e) => {
+    console.error("❌ WebSocket error", e);
+    addChatMessage({
+        type: 'chat',
+        sender: 'SYSTEM',
+        message: '❌ Błąd połączenia z serwerem',
+        color: '#F44336',
+        timestamp: Date.now()
+    });
+};
 
 ws.onclose = () => {
     console.warn("⚠️ WebSocket zamknięty");
@@ -579,6 +681,7 @@ ws.onmessage = (e) => {
                 if (voiceRangeInfo) {
                     voiceRangeInfo.textContent = '20m';
                 }
+                console.log(`Player initialized: ${myId}, voice range: ${voiceRange}`);
                 break;
                 
             case "state":
@@ -624,6 +727,7 @@ ws.onmessage = (e) => {
                 break;
                 
             case "voiceAudio":
+                console.log(`Received audio from ${data.from}, volume: ${data.volume}`);
                 playVoiceAudio(data.from, data.audio, data.volume);
                 break;
                 
@@ -637,6 +741,10 @@ ws.onmessage = (e) => {
                 
             case "voiceStatusUpdate":
                 showVoiceActivity(data.playerId, data.status === 'talking');
+                break;
+                
+            case "pong":
+                // Keep-alive
                 break;
         }
     } catch (err) {
@@ -721,6 +829,10 @@ function draw() {
             ctx.strokeStyle = `rgba(255, 152, 0, ${0.5 + pulse * 0.3})`;
             ctx.lineWidth = 3;
             ctx.stroke();
+            
+            ctx.fillStyle = '#FF9800';
+            ctx.font = 'bold 20px Arial';
+            ctx.fillText('🎤', x, y - p.r * zoom - 15);
         }
     });
     
@@ -791,6 +903,14 @@ function drawVoiceRange(me) {
     ctx.stroke();
     ctx.fillStyle = 'rgba(33, 150, 243, 0.1)';
     ctx.fill();
+    
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(20, canvas.height - 40, 120, 30);
+    ctx.fillStyle = '#fff';
+    ctx.font = '12px Arial';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`Voice: ${voiceConnections.size} graczy`, 30, canvas.height - 25);
 }
 
 function updateHUD() {
@@ -836,4 +956,17 @@ window.addEventListener('DOMContentLoaded', () => {
 
 window.addEventListener('beforeunload', () => {
     stopVoiceChat();
+    
+    if (voiceStream) {
+        voiceStream.getTracks().forEach(track => track.stop());
+    }
 });
+
+// Regular ping do serwera
+setInterval(() => {
+    if (ws.readyState === WebSocket.OPEN && myId) {
+        ws.send(JSON.stringify({
+            type: 'ping'
+        }));
+    }
+}, 25000);
