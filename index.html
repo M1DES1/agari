@@ -8,49 +8,32 @@
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
+        /* ... (poprzednie style pozostają) ... */
+        
+        .notification {
+            animation: slideInRight 0.3s ease-out;
         }
         
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
         }
         
-        @keyframes glow {
-            0%, 100% { text-shadow: 0 0 10px rgba(102, 126, 234, 0.5); }
-            50% { text-shadow: 0 0 20px rgba(102, 126, 234, 0.8); }
-        }
-        
-        @keyframes wave {
-            0%, 100% { transform: scaleY(1); }
-            50% { transform: scaleY(1.5); }
-        }
-        
-        @keyframes recording {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
-        }
-        
-        .floating-icon {
-            animation: float 3s ease-in-out infinite;
-        }
-        
-        .glowing-text {
-            animation: glow 2s ease-in-out infinite;
-        }
-        
-        .volume-bar {
-            width: 6px;
-            background: #4CAF50;
-            border-radius: 3px;
-            animation: wave 0.5s ease-in-out infinite;
-            animation-play-state: paused;
-        }
-        
-        .recording-dot {
-            animation: recording 1s infinite;
+        @keyframes slideOutRight {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateX(100%);
+            }
         }
     </style>
 </head>
@@ -64,108 +47,6 @@
             <div class="bg-circle" style="top: 40%; left: 40%; animation-delay: 2s;"></div>
         </div>
         
-        <!-- Modal testu mikrofonu z echem -->
-        <div id="micTestModal" class="mic-test-modal">
-            <div class="mic-test-content">
-                <div class="mic-test-header">
-                    <div class="mic-test-icon">
-                        <i class="fas fa-microphone"></i>
-                    </div>
-                    <h2>Test Mikrofonu z Echem w Czasie Rzeczywistym</h2>
-                    <button class="mic-test-close" id="closeMicTest">&times;</button>
-                </div>
-                
-                <div class="mic-test-body">
-                    <div class="test-section">
-                        <h3><i class="fas fa-volume-up"></i> Test Dźwięku</h3>
-                        <p>Kliknij przycisk poniżej aby usłyszeć testowy dźwięk:</p>
-                        <button id="testSoundBtn" class="test-btn">
-                            <i class="fas fa-play"></i> Odtwórz testowy dźwięk
-                        </button>
-                        <div class="sound-test-result" id="soundTestResult">
-                            <i class="fas fa-headphones"></i> Kliknij przycisk aby sprawdzić dźwięk
-                        </div>
-                    </div>
-                    
-                    <div class="test-section">
-                        <h3><i class="fas fa-microphone-alt"></i> Test Mikrofonu z Echem</h3>
-                        <p><strong>NOWOŚĆ: Test z echem w czasie rzeczywistym!</strong><br>
-                        Mów do mikrofonu i usłysz swój głos w głośnikach. Użyj słuchawek aby uniknąć sprzężenia.</p>
-                        
-                        <div class="mic-test-controls">
-                            <button id="startMicTest" class="test-btn test-btn-primary">
-                                <i class="fas fa-record-vinyl"></i> Rozpocznij test mikrofonu z echem
-                            </button>
-                            <button id="stopMicTest" class="test-btn test-btn-secondary" disabled>
-                                <i class="fas fa-stop"></i> Zatrzymaj test
-                            </button>
-                        </div>
-                        
-                        <!-- Kontrolka głośności echa -->
-                        <div id="echoVolumeControl" style="display: none; margin-top: 15px; padding: 15px; background: rgba(33, 150, 243, 0.1); border-radius: 10px; border: 1px solid rgba(33, 150, 243, 0.3);">
-                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                                <div style="display: flex; align-items: center; gap: 10px; color: #2196F3;">
-                                    <i class="fas fa-volume-up"></i>
-                                    <span style="font-weight: bold;">Głośność echa</span>
-                                </div>
-                                <span id="volumeValue" style="font-weight: bold; color: #2196F3;">50%</span>
-                            </div>
-                            <input type="range" id="volumeSlider" min="0" max="100" value="50" style="width: 100%;">
-                            <div style="display: flex; justify-content: space-between; margin-top: 5px; color: #666; font-size: 0.9rem;">
-                                <span>Cicho</span>
-                                <span>Głośno</span>
-                            </div>
-                            <div style="margin-top: 10px; font-size: 0.85rem; color: #666;">
-                                <i class="fas fa-info-circle"></i> Użyj słuchawek aby uniknąć sprzężenia
-                            </div>
-                        </div>
-                        
-                        <div class="volume-visualizer">
-                            <div class="volume-bars" id="volumeBars">
-                                <!-- Paski będą dodawane dynamicznie -->
-                            </div>
-                            <div class="volume-info">
-                                <div class="volume-level">
-                                    <span>Poziom dźwięku:</span>
-                                    <strong id="volumeLevel">0%</strong>
-                                </div>
-                                <div class="mic-status" id="micStatus">
-                                    <i class="fas fa-microphone-slash"></i> Mikrofon nieaktywny
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="mic-test-feedback">
-                            <div class="feedback-message" id="feedbackMessage">
-                                <i class="fas fa-info-circle"></i> Rozpocznij test aby sprawdzić mikrofon
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="test-instructions">
-                        <h4><i class="fas fa-lightbulb"></i> Wskazówki do testu ECHO:</h4>
-                        <ul>
-                            <li><strong>Test echo</strong> - mów do mikrofonu, usłyszysz swój głos w głośnikach</li>
-                            <li><strong>Użyj suwaka</strong> - dostosuj głośność echa do swoich preferencji</li>
-                            <li><strong>Zielone paski</strong> - pokazują aktywność twojego mikrofonu</li>
-                            <li><strong>Włącz słuchawki</strong> - aby uniknąć sprzężenia zwrotnego</li>
-                            <li><strong>Jeśli nie słyszysz swojego głosu</strong> - sprawdź głośność systemu</li>
-                        </ul>
-                    </div>
-                </div>
-                
-                <div class="mic-test-footer">
-                    <button id="finishTest" class="finish-btn">
-                        <i class="fas fa-check"></i> Zakończ test
-                    </button>
-                    <div class="test-hint">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        Voice chat działa najlepiej z słuchawkami!
-                    </div>
-                </div>
-            </div>
-        </div>
-        
         <div class="menu-box">
             <div class="logo-header">
                 <div class="floating-icon" style="font-size: 4rem; margin-bottom: 10px;">
@@ -174,7 +55,7 @@
                 <h1 class="glowing-text">AGARIO MULTIPLAYER</h1>
                 <div class="game-subtitle">
                     <span class="pulse-dot"></span>
-                    <span>VOICE CHAT EDITION</span>
+                    <span>EXTENDED EDITION</span>
                     <span class="pulse-dot"></span>
                 </div>
             </div>
@@ -227,6 +108,33 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- NOWA SEKCJA: Wgrywanie grafiki -->
+                    <div class="image-upload-section" id="imageUploadSection">
+                        <div class="picker-header">
+                            <i class="fas fa-image"></i>
+                            <h4>Własna grafika kulki</h4>
+                        </div>
+                        <input type="file" 
+                               id="imageUpload" 
+                               accept="image/*" 
+                               style="display: none;">
+                        <button id="imageUploadBtn" class="image-upload-btn">
+                            <i class="fas fa-upload"></i>
+                            Wybierz grafikę
+                        </button>
+                        <div class="image-hint">
+                            <i class="fas fa-info-circle"></i>
+                            Wybierz obraz (PNG, JPG, GIF). Maksymalnie 2MB.
+                        </div>
+                        <div class="image-preview" id="imagePreview">
+                            <img id="previewImage" src="" alt="Podgląd">
+                            <button id="removeImageBtn" class="remove-image-btn">
+                                <i class="fas fa-trash"></i>
+                                Usuń
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="setup-card">
@@ -246,22 +154,8 @@
                             </div>
                             <div class="hint voice-hint">
                                 <i class="fas fa-headphones"></i>
-                                Zalecane używanie słuchawek (unikaj echa)
+                                Zalecane używanie słuchawek
                             </div>
-                        </div>
-                        
-                        <div class="test-microphone-section">
-                            <div class="test-header">
-                                <i class="fas fa-vial"></i>
-                                <h4>Przetestuj swój mikrofon z echem</h4>
-                            </div>
-                            <p class="test-description">
-                                <strong>NOWOŚĆ:</strong> Test z echem w czasie rzeczywistym! Mów do mikrofonu i słuchaj swojego głosu.
-                            </p>
-                            <button id="openMicTest" class="test-mic-btn">
-                                <i class="fas fa-microphone-alt"></i>
-                                Testuj mikrofon z echem
-                            </button>
                         </div>
                         
                         <div class="voice-info">
@@ -307,18 +201,34 @@
                 
                 <div class="feature-card">
                     <div class="feature-icon" style="background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);">
-                        <i class="fas fa-comments"></i>
+                        <i class="fas fa-utensils"></i>
                     </div>
-                    <h4>Czat Tekstowy</h4>
-                    <p>Pisz z emotikonami</p>
+                    <h4>Zbieraj Jedzenie</h4>
+                    <p>1000 kulek do zbierania</p>
                 </div>
                 
                 <div class="feature-card">
                     <div class="feature-icon" style="background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);">
-                        <i class="fas fa-trophy"></i>
+                        <i class="fas fa-running"></i>
                     </div>
-                    <h4>System Rankingowy</h4>
-                    <p>Walcz o pierwsze miejsce</p>
+                    <h4>Uciekające Kulki</h4>
+                    <p>Ścigaj świecące wirusy</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%);">
+                        <i class="fas fa-crosshairs"></i>
+                    </div>
+                    <h4>Strzelanie Kulki</h4>
+                    <p>Wystrzeliwuj część siebie</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #00BCD4 0%, #0097A7 100%);">
+                        <i class="fas fa-image"></i>
+                    </div>
+                    <h4>Własna Grafika</h4>
+                    <p>Wgraj własne logo</p>
                 </div>
             </div>
             
@@ -371,11 +281,21 @@
                         <kbd class="key-large"><i class="fas fa-mouse-pointer"></i></kbd>
                         <span>Kliknij na minimapę</span>
                     </div>
+                    
+                    <div class="control-item">
+                        <kbd class="key-large">SHIFT</kbd>
+                        <span>Przytrzymaj do strzału</span>
+                    </div>
+                    
+                    <div class="control-item">
+                        <kbd class="key-large">SPACJA</kbd>
+                        <span>Strzel kulki (ze SHIFT)</span>
+                    </div>
                 </div>
                 
                 <div class="game-tip">
                     <i class="fas fa-lightbulb"></i>
-                    <p><strong>Nowość:</strong> Przetestuj mikrofon z echem przed grą! Usłyszysz swój głos w czasie rzeczywistym.</p>
+                    <p><strong>Strategia:</strong> Zacznij od małych kulek, jedz wirusy dla bonusu x10, strzelaj kulki aby atakować większych graczy!</p>
                 </div>
             </div>
             
@@ -388,17 +308,13 @@
                     <span id="statusText" class="status-text">🟢 Serwer gotowy</span>
                     <span class="status-subtext">Połącz się z graczami na całym świecie</span>
                 </div>
-                <button id="quickTestBtn" class="quick-test-btn">
-                    <i class="fas fa-bolt"></i>
-                    Test z echem
-                </button>
             </div>
             
             <div class="footer-info">
-                <div class="version">v3.2 • Voice Chat z Testem Echa</div>
+                <div class="version">v4.0 • Extended Edition</div>
                 <div class="creator">
                     <i class="fas fa-code"></i>
-                    Test z echem w czasie rzeczywistym
+                    Nowe funkcje: Jedzenie, Wirusy, Strzelanie, Grafiki
                 </div>
             </div>
         </div>
@@ -409,26 +325,14 @@
             const playBtn = document.getElementById('playBtn');
             const nicknameInput = document.getElementById('nickname');
             const voicePermission = document.getElementById('voicePermission');
-            const openMicTestBtn = document.getElementById('openMicTest');
-            const quickTestBtn = document.getElementById('quickTestBtn');
-            const micTestModal = document.getElementById('micTestModal');
-            const closeMicTestBtn = document.getElementById('closeMicTest');
-            const finishTestBtn = document.getElementById('finishTest');
-            const testSoundBtn = document.getElementById('testSoundBtn');
-            const startMicTestBtn = document.getElementById('startMicTest');
-            const stopMicTestBtn = document.getElementById('stopMicTest');
-            const volumeSlider = document.getElementById('volumeSlider');
-            const volumeValue = document.getElementById('volumeValue');
+            const imageUpload = document.getElementById('imageUpload');
+            const imageUploadBtn = document.getElementById('imageUploadBtn');
+            const imagePreview = document.getElementById('imagePreview');
+            const previewImage = document.getElementById('previewImage');
+            const removeImageBtn = document.getElementById('removeImageBtn');
+            const imageUploadSection = document.getElementById('imageUploadSection');
             
-            // Zmienne dla testu mikrofonu z echem
-            let audioContext = null;
-            let analyser = null;
-            let microphone = null;
-            let mediaStream = null;
-            let isTesting = false;
-            let audioTested = false;
-            let micTested = false;
-            let gainNode = null;
+            let selectedImageUrl = null;
             
             // Animacja przycisku gry
             playBtn.addEventListener('mouseenter', function() {
@@ -472,6 +376,81 @@
             document.querySelectorAll('.color-option')[0].classList.add('selected');
             document.querySelectorAll('.color-option')[0].querySelector('.color-check').style.opacity = '1';
             
+            // Wgrywanie grafiki
+            imageUploadBtn.addEventListener('click', () => {
+                imageUpload.click();
+            });
+            
+            imageUpload.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    if (file.size > 2 * 1024 * 1024) {
+                        showNotification('Plik jest za duży! Maksymalnie 2MB.', 'error');
+                        return;
+                    }
+                    
+                    if (!file.type.match('image.*')) {
+                        showNotification('Proszę wybrać plik graficzny!', 'error');
+                        return;
+                    }
+                    
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        selectedImageUrl = e.target.result;
+                        previewImage.src = selectedImageUrl;
+                        imagePreview.style.display = 'block';
+                        showNotification('Grafika załadowana pomyślnie!', 'success');
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+            
+            // Usuwanie grafiki
+            removeImageBtn.addEventListener('click', function() {
+                selectedImageUrl = null;
+                previewImage.src = '';
+                imagePreview.style.display = 'none';
+                imageUpload.value = '';
+                showNotification('Grafika usunięta', 'info');
+            });
+            
+            // Drag & drop dla grafiki
+            imageUploadSection.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                this.classList.add('drag-over');
+            });
+            
+            imageUploadSection.addEventListener('dragleave', function() {
+                this.classList.remove('drag-over');
+            });
+            
+            imageUploadSection.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.classList.remove('drag-over');
+                
+                const file = e.dataTransfer.files[0];
+                if (file) {
+                    if (file.size > 2 * 1024 * 1024) {
+                        showNotification('Plik jest za duży! Maksymalnie 2MB.', 'error');
+                        return;
+                    }
+                    
+                    if (!file.type.match('image.*')) {
+                        showNotification('Proszę wybrać plik graficzny!', 'error');
+                        return;
+                    }
+                    
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        selectedImageUrl = e.target.result;
+                        previewImage.src = selectedImageUrl;
+                        imagePreview.style.display = 'block';
+                        showNotification('Grafika załadowana pomyślnie!', 'success');
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+            
             // Rozpoczęcie gry
             playBtn.addEventListener('click', function() {
                 const nickname = nicknameInput.value.trim();
@@ -503,6 +482,7 @@
                         nickname: nickname,
                         color: selectedColor,
                         allowVoice: allowVoice,
+                        imageUrl: selectedImageUrl,
                         timestamp: Date.now()
                     }));
                     
@@ -511,375 +491,14 @@
                 }, 200);
             });
             
-            // Test mikrofonu z echem - otwórz modal
-            openMicTestBtn.addEventListener('click', openMicTestModal);
-            quickTestBtn.addEventListener('click', openMicTestModal);
-            
-            // Zamknij modal
-            closeMicTestBtn.addEventListener('click', closeMicTestModal);
-            finishTestBtn.addEventListener('click', closeMicTestModal);
-            
-            // Kliknięcie poza modalem zamyka go
-            micTestModal.addEventListener('click', function(e) {
-                if (e.target === this) {
-                    closeMicTestModal();
-                }
-            });
-            
-            // Test dźwięku
-            testSoundBtn.addEventListener('click', testSound);
-            
-            // Test mikrofonu z echem
-            startMicTestBtn.addEventListener('click', startMicTest);
-            stopMicTestBtn.addEventListener('click', stopMicTest);
-            
-            // Suwak głośności echa
-            if (volumeSlider) {
-                volumeSlider.addEventListener('input', function() {
-                    const value = parseInt(this.value);
-                    if (volumeValue) {
-                        volumeValue.textContent = `${value}%`;
-                    }
-                    
-                    // Zaktualizuj głośność echa w czasie rzeczywistym
-                    if (gainNode && audioContext) {
-                        gainNode.gain.value = value / 100;
-                    }
-                });
-            }
-            
-            // Inicjalizuj paski głośności
-            initVolumeBars();
-            
-            function openMicTestModal() {
-                micTestModal.style.display = 'flex';
-                document.body.style.overflow = 'hidden';
-                
-                // Resetuj testy
-                audioTested = false;
-                micTested = false;
-                updateSoundTestResult();
-                updateFeedbackMessage('Rozpocznij testy aby sprawdzić swój mikrofon z echem', 'info');
-                
-                // Ukryj kontrolkę głośności
-                const volumeControl = document.getElementById('echoVolumeControl');
-                if (volumeControl) {
-                    volumeControl.style.display = 'none';
-                }
-            }
-            
-            function closeMicTestModal() {
-                stopMicTest(); // Zatrzymaj test jeśli działa
-                micTestModal.style.display = 'none';
-                document.body.style.overflow = 'auto';
-            }
-            
-            function testSound() {
-                try {
-                    // Utwórz kontekst audio
-                    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                    
-                    // Stwórz oscylator (generator dźwięku)
-                    const oscillator = audioCtx.createOscillator();
-                    const gainNode = audioCtx.createGain();
-                    
-                    // Ustaw parametry dźwięku
-                    oscillator.type = 'sine';
-                    oscillator.frequency.setValueAtTime(440, audioCtx.currentTime); // A4
-                    
-                    // Envelope dla dźwięku
-                    gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-                    gainNode.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.1);
-                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
-                    
-                    // Połącz węzły
-                    oscillator.connect(gainNode);
-                    gainNode.connect(audioCtx.destination);
-                    
-                    // Zacznij i zatrzymaj dźwięk
-                    oscillator.start();
-                    oscillator.stop(audioCtx.currentTime + 0.5);
-                    
-                    // Oznacz test jako wykonany
-                    audioTested = true;
-                    updateSoundTestResult();
-                    updateFeedbackMessage('✅ Test dźwięku zakończony pomyślnie!', 'success');
-                    
-                    // Przycisk z animacją
-                    testSoundBtn.innerHTML = '<i class="fas fa-check"></i> Test zakończony';
-                    testSoundBtn.style.background = 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)';
-                    
-                    setTimeout(() => {
-                        testSoundBtn.innerHTML = '<i class="fas fa-play"></i> Odtwórz testowy dźwięk';
-                        testSoundBtn.style.background = '';
-                    }, 2000);
-                    
-                } catch (error) {
-                    console.error('Błąd testu dźwięku:', error);
-                    updateFeedbackMessage('❌ Błąd testu dźwięku. Sprawdź głośność systemu.', 'error');
-                }
-            }
-            
-            async function startMicTest() {
-                try {
-                    // Zatrzymaj poprzedni test jeśli istnieje
-                    if (mediaStream) {
-                        mediaStream.getTracks().forEach(track => track.stop());
-                    }
-                    
-                    // Poproś o dostęp do mikrofonu
-                    mediaStream = await navigator.mediaDevices.getUserMedia({
-                        audio: {
-                            echoCancellation: false, // Wyłącz echo cancellation dla testu
-                            noiseSuppression: true,
-                            autoGainControl: true,
-                            channelCount: 1
-                        }
-                    });
-                    
-                    // Inicjalizuj AudioContext
-                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                    
-                    // Stwórz analizator
-                    analyser = audioContext.createAnalyser();
-                    analyser.fftSize = 256;
-                    analyser.smoothingTimeConstant = 0.8;
-                    
-                    // Stwórz węzeł głośności dla wyjścia
-                    gainNode = audioContext.createGain();
-                    gainNode.gain.value = 0.5; // 50% głośności dla komfortu
-                    
-                    // Podłącz mikrofon do analizatora I do wyjścia (echo)
-                    microphone = audioContext.createMediaStreamSource(mediaStream);
-                    microphone.connect(analyser);
-                    microphone.connect(gainNode);
-                    gainNode.connect(audioContext.destination); // Podłącz do głośników
-                    
-                    // Zmień stan przycisków
-                    startMicTestBtn.disabled = true;
-                    stopMicTestBtn.disabled = false;
-                    startMicTestBtn.innerHTML = '<i class="fas fa-microphone"></i> Test w trakcie...';
-                    startMicTestBtn.style.background = 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)';
-                    
-                    // Pokaż kontrolkę głośności
-                    const volumeControl = document.getElementById('echoVolumeControl');
-                    if (volumeControl) {
-                        volumeControl.style.display = 'block';
-                    }
-                    
-                    // Aktualizuj status
-                    updateMicStatus('active');
-                    updateFeedbackMessage('🗣️ Mów do mikrofonu! Usłyszysz swój głos w głośnikach.', 'info');
-                    
-                    // Rozpocznij animację pasków
-                    isTesting = true;
-                    animateVolumeBars();
-                    
-                    // Oznacz test jako wykonany
-                    micTested = true;
-                    
-                } catch (error) {
-                    console.error('Błąd dostępu do mikrofonu:', error);
-                    updateFeedbackMessage('❌ Brak dostępu do mikrofonu. Sprawdź uprawnienia przeglądarki.', 'error');
-                    updateMicStatus('error');
-                }
-            }
-            
-            function stopMicTest() {
-                isTesting = false;
-                
-                // Ukryj kontrolkę głośności
-                const volumeControl = document.getElementById('echoVolumeControl');
-                if (volumeControl) {
-                    volumeControl.style.display = 'none';
-                }
-                
-                // Zatrzymaj stream
-                if (mediaStream) {
-                    mediaStream.getTracks().forEach(track => track.stop());
-                    mediaStream = null;
-                }
-                
-                // Zamknij audio context
-                if (audioContext) {
-                    audioContext.close();
-                    audioContext = null;
-                    gainNode = null;
-                }
-                
-                // Resetuj przyciski
-                startMicTestBtn.disabled = false;
-                stopMicTestBtn.disabled = true;
-                startMicTestBtn.innerHTML = '<i class="fas fa-record-vinyl"></i> Rozpocznij test mikrofonu z echem';
-                startMicTestBtn.style.background = '';
-                
-                // Resetuj paski
-                resetVolumeBars();
-                
-                // Aktualizuj status
-                updateMicStatus('inactive');
-                
-                if (micTested) {
-                    updateFeedbackMessage('✅ Test mikrofonu z echem zakończony. Mikrofon działa poprawnie!', 'success');
-                }
-            }
-            
-            function initVolumeBars() {
-                const volumeBars = document.getElementById('volumeBars');
-                if (!volumeBars) return;
-                
-                volumeBars.innerHTML = '';
-                
-                for (let i = 0; i < 20; i++) {
-                    const bar = document.createElement('div');
-                    bar.className = 'volume-bar';
-                    bar.style.height = '20px';
-                    bar.style.animationDelay = `${i * 0.05}s`;
-                    volumeBars.appendChild(bar);
-                }
-            }
-            
-            function animateVolumeBars() {
-                if (!isTesting || !analyser) return;
-                
-                const dataArray = new Uint8Array(analyser.frequencyBinCount);
-                analyser.getByteFrequencyData(dataArray);
-                
-                // Oblicz średni poziom dźwięku
-                let sum = 0;
-                for (let i = 0; i < dataArray.length; i++) {
-                    sum += dataArray[i];
-                }
-                const average = sum / dataArray.length;
-                const volumePercent = Math.min(100, Math.round((average / 128) * 100));
-                
-                // Aktualizuj poziom dźwięku
-                const volumeLevel = document.getElementById('volumeLevel');
-                if (volumeLevel) {
-                    volumeLevel.textContent = `${volumePercent}%`;
-                }
-                
-                // Aktualizuj paski
-                const bars = document.querySelectorAll('.volume-bar');
-                const activeBars = Math.min(bars.length, Math.floor((volumePercent / 100) * bars.length));
-                
-                bars.forEach((bar, index) => {
-                    if (index < activeBars) {
-                        // Ustaw wysokość i kolor na podstawie poziomu
-                        const height = 20 + (index * 2);
-                        bar.style.height = `${height}px`;
-                        
-                        // Kolor gradientu: zielony → żółty → czerwony
-                        if (index < 7) {
-                            bar.style.background = '#4CAF50'; // Zielony
-                        } else if (index < 14) {
-                            bar.style.background = '#FFC107'; // Żółty
-                        } else {
-                            bar.style.background = '#F44336'; // Czerwony
-                        }
-                        
-                        bar.style.animationPlayState = 'running';
-                    } else {
-                        bar.style.height = '20px';
-                        bar.style.background = '#e0e0e0';
-                        bar.style.animationPlayState = 'paused';
-                    }
-                });
-                
-                // Kontynuuj animację
-                requestAnimationFrame(animateVolumeBars);
-            }
-            
-            function resetVolumeBars() {
-                const bars = document.querySelectorAll('.volume-bar');
-                bars.forEach(bar => {
-                    bar.style.height = '20px';
-                    bar.style.background = '#e0e0e0';
-                    bar.style.animationPlayState = 'paused';
-                });
-                
-                const volumeLevel = document.getElementById('volumeLevel');
-                if (volumeLevel) {
-                    volumeLevel.textContent = '0%';
-                }
-            }
-            
-            function updateMicStatus(status) {
-                const micStatus = document.getElementById('micStatus');
-                if (!micStatus) return;
-                
-                switch(status) {
-                    case 'active':
-                        micStatus.innerHTML = '<i class="fas fa-microphone recording-dot"></i> Mikrofon aktywny - mów!';
-                        micStatus.style.color = '#4CAF50';
-                        break;
-                    case 'inactive':
-                        micStatus.innerHTML = '<i class="fas fa-microphone-slash"></i> Mikrofon nieaktywny';
-                        micStatus.style.color = '#757575';
-                        break;
-                    case 'error':
-                        micStatus.innerHTML = '<i class="fas fa-exclamation-circle"></i> Błąd mikrofonu';
-                        micStatus.style.color = '#F44336';
-                        break;
-                }
-            }
-            
-            function updateSoundTestResult() {
-                const resultElement = document.getElementById('soundTestResult');
-                if (!resultElement) return;
-                
-                if (audioTested) {
-                    resultElement.innerHTML = '<i class="fas fa-check-circle"></i> ✅ Dźwięk działa poprawnie';
-                    resultElement.style.color = '#4CAF50';
-                    resultElement.style.fontWeight = 'bold';
-                } else {
-                    resultElement.innerHTML = '<i class="fas fa-headphones"></i> Kliknij przycisk aby sprawdzić dźwięk';
-                    resultElement.style.color = '#757575';
-                    resultElement.style.fontWeight = 'normal';
-                }
-            }
-            
-            function updateFeedbackMessage(message, type) {
-                const feedbackElement = document.getElementById('feedbackMessage');
-                if (!feedbackElement) return;
-                
-                feedbackElement.innerHTML = `<i class="fas fa-${getIconForType(type)}"></i> ${message}`;
-                
-                switch(type) {
-                    case 'success':
-                        feedbackElement.style.background = 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)';
-                        feedbackElement.style.color = 'white';
-                        break;
-                    case 'error':
-                        feedbackElement.style.background = 'linear-gradient(135deg, #F44336 0%, #D32F2F 100%)';
-                        feedbackElement.style.color = 'white';
-                        break;
-                    case 'info':
-                        feedbackElement.style.background = 'linear-gradient(135deg, #2196F3 0%, #1976D2 100%)';
-                        feedbackElement.style.color = 'white';
-                        break;
-                    case 'warning':
-                        feedbackElement.style.background = 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)';
-                        feedbackElement.style.color = 'white';
-                        break;
-                }
-            }
-            
-            function getIconForType(type) {
-                switch(type) {
-                    case 'success': return 'check-circle';
-                    case 'error': return 'exclamation-circle';
-                    case 'info': return 'info-circle';
-                    case 'warning': return 'exclamation-triangle';
-                    default: return 'info-circle';
-                }
-            }
-            
             function showNotification(message, type = 'info') {
                 const notification = document.createElement('div');
                 notification.className = `notification notification-${type}`;
                 notification.innerHTML = `
-                    <i class="fas fa-${type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+                    <i class="fas fa-${type === 'error' ? 'exclamation-circle' : 
+                                      type === 'success' ? 'check-circle' : 
+                                      type === 'warning' ? 'exclamation-triangle' : 
+                                      'info-circle'}"></i>
                     <span>${message}</span>
                 `;
                 
@@ -887,7 +506,9 @@
                     position: fixed;
                     top: 20px;
                     right: 20px;
-                    background: ${type === 'error' ? '#F44336' : '#4CAF50'};
+                    background: ${type === 'error' ? '#F44336' : 
+                                type === 'success' ? '#4CAF50' : 
+                                type === 'warning' ? '#FF9800' : '#2196F3'};
                     color: white;
                     padding: 15px 25px;
                     border-radius: 10px;
@@ -955,6 +576,37 @@
                     statusDot.style.background = '#F44336';
                     showNotification('Nie udało się połączyć z serwerem', 'error');
                 }
+            }
+            
+            // Ładuj zapisaną grafikę jeśli istnieje
+            const savedPlayerData = JSON.parse(localStorage.getItem('playerData') || '{}');
+            if (savedPlayerData.imageUrl) {
+                selectedImageUrl = savedPlayerData.imageUrl;
+                previewImage.src = selectedImageUrl;
+                imagePreview.style.display = 'block';
+            }
+            
+            // Ładuj zapisany nick jeśli istnieje
+            if (savedPlayerData.nickname && savedPlayerData.nickname !== "Gracz") {
+                nicknameInput.value = savedPlayerData.nickname;
+            }
+            
+            // Ładuj zapisany kolor jeśli istnieje
+            if (savedPlayerData.color) {
+                document.querySelectorAll('.color-option').forEach(option => {
+                    if (option.dataset.color === savedPlayerData.color) {
+                        option.classList.add('selected');
+                        option.querySelector('.color-check').style.opacity = '1';
+                    } else {
+                        option.classList.remove('selected');
+                        option.querySelector('.color-check').style.opacity = '0';
+                    }
+                });
+            }
+            
+            // Ładuj ustawienie voice chatu
+            if (savedPlayerData.allowVoice !== undefined) {
+                voicePermission.checked = savedPlayerData.allowVoice;
             }
         });
     </script>
