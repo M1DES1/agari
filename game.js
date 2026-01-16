@@ -9,7 +9,7 @@ window.addEventListener("resize", () => {
   canvas.height = window.innerHeight;
 });
 
-// 🔥 Poprawny adres serwera Render
+// 🔥 Twój serwer Render
 const ws = new WebSocket("wss://agari-qfuc.onrender.com");
 
 let myId = null;
@@ -34,15 +34,16 @@ ws.onmessage = (e) => {
 
 // Aktualizacja pozycji gracza i wysyłanie ruchów
 function update() {
-  if (!myId) return; // Nie wysyłaj jeśli nie mamy ID
-  if (ws.readyState !== WebSocket.OPEN) return; // Nie wysyłaj jeśli WS nie połączony
+  if (!myId) return; 
+  if (ws.readyState !== WebSocket.OPEN) return;
 
   let dx = 0, dy = 0;
-  if (keys["w"]) dy -= 5;
-  if (keys["s"]) dy += 5;
-  if (keys["a"]) dx -= 5;
-  if (keys["d"]) dx += 5;
+  if (keys["w"] || keys["ArrowUp"]) dy -= 5;
+  if (keys["s"] || keys["ArrowDown"]) dy += 5;
+  if (keys["a"] || keys["ArrowLeft"]) dx -= 5;
+  if (keys["d"] || keys["ArrowRight"]) dx += 5;
 
+  // Wysyłamy ruch tylko dla naszej kulki
   ws.send(JSON.stringify({ type: "move", dx, dy }));
 }
 
@@ -54,13 +55,17 @@ function draw() {
   if (!me) return;
 
   players.forEach(p => {
-    const x = canvas.width / 2 + (p.x - me.x) / 2;
-    const y = canvas.height / 2 + (p.y - me.y) / 2;
+    const x = canvas.width / 2 + (p.x - me.x);
+    const y = canvas.height / 2 + (p.y - me.y);
 
     ctx.beginPath();
     ctx.arc(x, y, p.r, 0, Math.PI * 2);
-    ctx.fillStyle = p.id === myId ? "green" : "blue";
+
+    // Każdy widzi swoją kulkę na zielono, innych na niebiesko
+    ctx.fillStyle = (p.id === myId) ? "green" : "blue";
     ctx.fill();
+    ctx.strokeStyle = "#000";
+    ctx.stroke();
   });
 }
 
