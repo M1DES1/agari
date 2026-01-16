@@ -9,24 +9,33 @@ window.addEventListener("resize", () => {
   canvas.height = window.innerHeight;
 });
 
-// 🔥 TWÓJ SERWER RENDER
+// 🔥 Poprawny adres serwera Render
 const ws = new WebSocket("wss://agari-qfuc.onrender.com");
 
 let myId = null;
 let players = [];
+const keys = {};
 
+// Eventy klawiatury
+window.addEventListener("keydown", e => keys[e.key] = true);
+window.addEventListener("keyup", e => keys[e.key] = false);
+
+// Logowanie połączenia
+ws.onopen = () => console.log("✅ WebSocket połączony");
+ws.onerror = (e) => console.error("❌ WebSocket error", e);
+ws.onclose = () => console.warn("⚠️ WebSocket zamknięty");
+
+// Odbiór wiadomości z serwera
 ws.onmessage = (e) => {
   const data = JSON.parse(e.data);
   if (data.type === "init") myId = data.id;
   if (data.type === "state") players = data.players;
 };
 
-const keys = {};
-window.addEventListener("keydown", e => keys[e.key] = true);
-window.addEventListener("keyup", e => keys[e.key] = false);
-
+// Aktualizacja pozycji gracza i wysyłanie ruchów
 function update() {
-  if (!myId) return;
+  if (!myId) return; // Nie wysyłaj jeśli nie mamy ID
+  if (ws.readyState !== WebSocket.OPEN) return; // Nie wysyłaj jeśli WS nie połączony
 
   let dx = 0, dy = 0;
   if (keys["w"]) dy -= 5;
@@ -37,6 +46,7 @@ function update() {
   ws.send(JSON.stringify({ type: "move", dx, dy }));
 }
 
+// Rysowanie graczy
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -54,6 +64,7 @@ function draw() {
   });
 }
 
+// Główna pętla gry
 function loop() {
   update();
   draw();
