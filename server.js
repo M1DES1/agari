@@ -1,8 +1,11 @@
 const WebSocket = require('ws');
 const PORT = process.env.PORT || 3000;
-const wss = new WebSocket.Server({ port: PORT });
+const wss = new WebSocket.Server({ 
+    port: PORT,
+    perMessageDeflate: false // Wyłącz kompresję dla mniejszego opóźnienia
+});
 
-const players = {};
+const players = new Map(); // Używamy Map zamiast obiektu dla lepszej wydajności
 const foods = [];
 const viruses = [];
 const bullets = [];
@@ -10,22 +13,28 @@ const chatHistory = [];
 const voiceConnections = new Map();
 const MAX_CHAT_HISTORY = 100;
 const MAP_SIZE = 5000;
-const MAX_RADIUS = 500;
 const INITIAL_RADIUS = 20;
-const SPEED_FACTOR = 3;
+const BASE_SPEED = 4.5; // Zwiększona prędkość bazowa
 const VOICE_RANGE = 200;
-const FOOD_COUNT = 1000;
-const VIRUS_COUNT = 20;
+const FOOD_COUNT = 800; // Zmniejszona ilość jedzenia dla lepszej wydajności
+const VIRUS_COUNT = 15;
 const BULLET_LIFETIME = 30000;
 const SPLIT_COOLDOWN = 10000;
 const VIRUS_SPLIT_COUNT = 10;
+const TICK_RATE = 30; // 30 FPS na serwerze
+const MAX_PLAYER_SPEED = 10;
+const MIN_PLAYER_SPEED = 0.5;
+
+// Buffery dla optymalizacji
+const playerUpdateBuffer = new Map();
+const lastUpdateTimes = new Map();
 
 // Inicjalizacja jedzenia
 function initFood() {
     foods.length = 0;
     for (let i = 0; i < FOOD_COUNT; i++) {
         foods.push({
-            id: `food_${Date.now()}_${i}`,
+            id: i,
             x: Math.random() * MAP_SIZE,
             y: Math.random() * MAP_SIZE,
             r: 5 + Math.random() * 5,
@@ -40,7 +49,7 @@ function initViruses() {
     viruses.length = 0;
     for (let i = 0; i < VIRUS_COUNT; i++) {
         viruses.push({
-            id: `virus_${Date.now()}_${i}`,
+            id: i,
             x: Math.random() * MAP_SIZE,
             y: Math.random() * MAP_SIZE,
             r: 30 + Math.random() * 20,
@@ -57,15 +66,20 @@ function initViruses() {
 initFood();
 initViruses();
 
-function randomPos() {
-    return Math.random() * MAP_SIZE;
-}
-
 function getSpeed(radius) {
-    return Math.max(0.5, SPEED_FACTOR * (INITIAL_RADIUS / radius));
+    // Optymalizacja: pre-calc i clamping
+    const speed = Math.max(MIN_PLAYER_SPEED, Math.min(MAX_PLAYER_SPEED, BASE_SPEED * (INITIAL_RADIUS / radius)));
+    return speed;
 }
 
 function getDistance(x1, y1, x2, y2) {
+    // Szybkie obliczanie odległości bez pierwiastka dla porównań
+    const dx = x1 - x2;
+    const dy = y1 - y2;
+    return dx * dx + dy * dy; // Zwraca kwadrat odległości
+}
+
+function getDistanceSqrt(x1, y1, x2, y2) {
     const dx = x1 - x2;
     const dy = y1 - y2;
     return Math.sqrt(dx * dx + dy * dy);
@@ -74,7 +88,7 @@ function getDistance(x1, y1, x2, y2) {
 function spawnFood(count = 1) {
     for (let i = 0; i < count; i++) {
         foods.push({
-            id: `food_${Date.now()}_${Math.random()}`,
+            id: Date.now() + Math.random(),
             x: Math.random() * MAP_SIZE,
             y: Math.random() * MAP_SIZE,
             r: 5 + Math.random() * 5,
@@ -86,7 +100,7 @@ function spawnFood(count = 1) {
 
 function spawnVirus() {
     viruses.push({
-        id: `virus_${Date.now()}`,
+        id: Date.now(),
         x: Math.random() * MAP_SIZE,
         y: Math.random() * MAP_SIZE,
         r: 30 + Math.random() * 20,
@@ -101,129 +115,129 @@ function spawnVirus() {
 
 function updateViruses() {
     const now = Date.now();
+    const virusUpdateInterval = 100; // Aktualizuj wirusy co 100ms
+    
     viruses.forEach(virus => {
-        // Zmień cel co 3-5 sekund
-        if (now - virus.lastUpdate > 3000 + Math.random() * 2000) {
-            virus.targetX = Math.random() * MAP_SIZE;
-            virus.targetY = Math.random() * MAP_SIZE;
+        if (now - virus.lastUpdate > virusUpdateInterval) {
+            // Uciekaj przed najbliższym graczem
+            let nearestPlayer = null;
+            let nearestDistSq = Infinity;
+            
+            players.forEach(player => {
+                const distSq = getDistance(virus.x, virus.y, player.x, player.y);
+                if (distSq < nearestDistSq) {
+                    nearestDistSq = distSq;
+                    nearestPlayer = player;
+                }
+            });
+            
+            if (nearestPlayer && nearestDistSq < 90000) { // 300^2
+                // Uciekaj od gracza
+                const angle = Math.atan2(virus.y - nearestPlayer.y, virus.x - nearestPlayer.x);
+                virus.x += Math.cos(angle) * virus.speed;
+                virus.y += Math.sin(angle) * virus.speed;
+            } else {
+                // Losowy ruch
+                const angle = Math.random() * Math.PI * 2;
+                virus.x += Math.cos(angle) * virus.speed * 0.3;
+                virus.y += Math.sin(angle) * virus.speed * 0.3;
+            }
+            
+            // Ograniczenia mapy
+            virus.x = Math.max(virus.r, Math.min(MAP_SIZE - virus.r, virus.x));
+            virus.y = Math.max(virus.r, Math.min(MAP_SIZE - virus.r, virus.y));
+            
             virus.lastUpdate = now;
         }
-        
-        // Uciekaj przed graczami
-        let nearestPlayer = null;
-        let nearestDist = Infinity;
-        
-        Object.values(players).forEach(player => {
-            const dist = getDistance(virus.x, virus.y, player.x, player.y);
-            if (dist < nearestDist) {
-                nearestDist = dist;
-                nearestPlayer = player;
-            }
-        });
-        
-        if (nearestPlayer && nearestDist < 300) {
-            // Uciekaj od gracza
-            const angle = Math.atan2(virus.y - nearestPlayer.y, virus.x - nearestPlayer.x);
-            virus.x += Math.cos(angle) * virus.speed;
-            virus.y += Math.sin(angle) * virus.speed;
-        } else {
-            // Ruch w stronę celu
-            const angle = Math.atan2(virus.targetY - virus.y, virus.targetX - virus.x);
-            virus.x += Math.cos(angle) * virus.speed * 0.5;
-            virus.y += Math.sin(angle) * virus.speed * 0.5;
-        }
-        
-        // Ograniczenia mapy
-        virus.x = Math.max(virus.r, Math.min(MAP_SIZE - virus.r, virus.x));
-        virus.y = Math.max(virus.r, Math.min(MAP_SIZE - virus.r, virus.y));
     });
 }
 
 function updateBullets() {
     const now = Date.now();
+    
     for (let i = bullets.length - 1; i >= 0; i--) {
         const bullet = bullets[i];
         
         // Sprawdź czy kula wygasła
         if (now - bullet.createdAt > BULLET_LIFETIME) {
             bullets.splice(i, 1);
-            
-            // Jeśli kula wygasła, dodaj część masy z powrotem do gracza
-            if (players[bullet.ownerId]) {
-                players[bullet.ownerId].r += bullet.r * 0.5;
-            }
             continue;
         }
         
         // Ruch w stronę właściciela
-        const owner = players[bullet.ownerId];
+        const owner = players.get(bullet.ownerId);
         if (owner) {
             const dx = owner.x - bullet.x;
             const dy = owner.y - bullet.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
             
-            if (dist < 10) {
+            if (dist < 15) { // Zwiększony radius połączenia
                 // Połączenie z właścicielem
                 owner.r += bullet.r * 0.8;
                 bullets.splice(i, 1);
                 
-                // Powiadom gracza
-                sendToPlayer(bullet.ownerId, {
-                    type: 'bulletReturn',
-                    mass: Math.round(bullet.r * 0.8)
-                });
+                // Buforuj powiadomienie
+                if (playerUpdateBuffer.has(bullet.ownerId)) {
+                    playerUpdateBuffer.get(bullet.ownerId).push({
+                        type: 'bulletReturn',
+                        mass: Math.round(bullet.r * 0.8)
+                    });
+                }
             } else {
-                // Ruch w stronę właściciela
-                const speed = 5;
+                // Szybszy ruch kuli
+                const speed = 8;
                 bullet.x += (dx / dist) * speed;
                 bullet.y += (dy / dist) * speed;
             }
-        } else {
-            // Jeśli właściciel nie istnieje, usuń kulę
-            bullets.splice(i, 1);
         }
     }
 }
 
 function checkCollisions(playerId) {
-    const player = players[playerId];
+    const player = players.get(playerId);
     if (!player) return;
     
-    // Kolizja z jedzeniem
-    for (let i = foods.length - 1; i >= 0; i--) {
+    // OPTYMALIZACJA: Używamy kwadratów odległości dla szybkości
+    const playerRadiusSq = player.r * player.r;
+    
+    // Kolizja z jedzeniem - batch processing
+    const foodCheckCount = Math.min(50, foods.length); // Sprawdzaj tylko najbliższe jedzenie
+    for (let i = foods.length - 1; i >= Math.max(0, foods.length - foodCheckCount); i--) {
         const food = foods[i];
-        const dist = getDistance(player.x, player.y, food.x, food.y);
+        const distSq = getDistance(player.x, player.y, food.x, food.y);
+        const collisionDist = player.r + food.r;
         
-        if (dist < player.r) {
-            // Zjedz jedzenie
+        if (distSq < collisionDist * collisionDist) {
             player.r += food.r * 0.5;
             foods.splice(i, 1);
             
-            // Respawnuj nowe jedzenie
-            spawnFood(1);
+            // Buforuj powiadomienie
+            if (playerUpdateBuffer.has(playerId)) {
+                playerUpdateBuffer.get(playerId).push({
+                    type: 'eatFood',
+                    mass: Math.round(food.r * 0.5)
+                });
+            }
             
-            sendToPlayer(playerId, {
-                type: 'eatFood',
-                mass: Math.round(food.r * 0.5)
-            });
+            spawnFood(1);
+            break; // Zjedz tylko jedno jedzenie na tick
         }
     }
     
     // Kolizja z wirusami
-    for (let i = viruses.length - 1; i >= 0; i--) {
-        const virus = viruses[i];
-        const dist = getDistance(player.x, player.y, virus.x, virus.y);
+    viruses.forEach((virus, i) => {
+        const distSq = getDistance(player.x, player.y, virus.x, virus.y);
+        const collisionDist = player.r + virus.r;
         
-        if (dist < player.r + virus.r) {
+        if (distSq < collisionDist * collisionDist) {
             if (player.r > virus.r * 1.1) {
-                // Zjedz wirusa
                 player.r += virus.r;
                 viruses.splice(i, 1);
                 
-                // Stwórz 10 małych kulek z wirusa
+                // Stwórz małe kulki
                 for (let j = 0; j < VIRUS_SPLIT_COUNT; j++) {
                     foods.push({
-                        id: `food_virus_${Date.now()}_${j}`,
+                        id: Date.now() + j,
                         x: player.x + (Math.random() - 0.5) * 200,
                         y: player.y + (Math.random() - 0.5) * 200,
                         r: 3,
@@ -232,149 +246,122 @@ function checkCollisions(playerId) {
                     });
                 }
                 
-                // Respawnuj nowego wirusa
-                setTimeout(() => spawnVirus(), 5000);
+                setTimeout(() => spawnVirus(), 3000);
                 
-                sendToPlayer(playerId, {
-                    type: 'eatVirus',
-                    mass: Math.round(virus.r)
-                });
+                if (playerUpdateBuffer.has(playerId)) {
+                    playerUpdateBuffer.get(playerId).push({
+                        type: 'eatVirus',
+                        mass: Math.round(virus.r)
+                    });
+                }
             } else if (virus.r > player.r * 1.1) {
                 // Virus zjada gracza
-                sendToPlayer(playerId, {
-                    type: 'eaten',
-                    by: 'Virus'
-                });
-                
-                // Usuń gracza
-                const playerName = player.nickname;
-                delete players[playerId];
-                
-                broadcast({
-                    type: 'chat',
-                    sender: 'SYSTEM',
-                    message: `💀 ${playerName} został zjedzony przez wirusa!`,
-                    color: '#FF0000',
-                    timestamp: Date.now()
-                });
-                
+                broadcastPlayerEaten(playerId, 'Virus');
                 return;
             }
         }
-    }
+    });
     
     // Kolizja z innymi graczami
-    Object.keys(players).forEach(otherId => {
+    players.forEach((other, otherId) => {
         if (otherId === playerId) return;
         
-        const other = players[otherId];
-        const dist = getDistance(player.x, player.y, other.x, other.y);
+        const distSq = getDistance(player.x, player.y, other.x, other.y);
+        const collisionDist = player.r + other.r;
         
-        if (dist < player.r + other.r) {
+        if (distSq < collisionDist * collisionDist) {
             if (player.r > other.r * 1.1) {
-                // Zjedz innego gracza
                 player.r += other.r * 0.7;
                 
-                // Powiadom obu graczy
-                sendToPlayer(playerId, {
-                    type: 'eatPlayer',
-                    playerId: otherId,
-                    mass: Math.round(other.r * 0.7)
-                });
+                // Powiadomienia
+                if (playerUpdateBuffer.has(playerId)) {
+                    playerUpdateBuffer.get(playerId).push({
+                        type: 'eatPlayer',
+                        playerId: otherId,
+                        mass: Math.round(other.r * 0.7)
+                    });
+                }
                 
-                sendToPlayer(otherId, {
-                    type: 'eaten',
-                    by: player.nickname
-                });
+                if (playerUpdateBuffer.has(otherId)) {
+                    playerUpdateBuffer.get(otherId).push({
+                        type: 'eaten',
+                        by: player.nickname
+                    });
+                }
                 
-                // Usuń zjedzonego gracza
-                const otherName = other.nickname;
-                delete players[otherId];
-                
-                broadcast({
-                    type: 'chat',
-                    sender: 'SYSTEM',
-                    message: `🍽️ ${player.nickname} zjadł ${otherName}!`,
-                    color: '#FF9800',
-                    timestamp: Date.now()
-                });
-                
-            } else if (other.r > player.r * 1.1) {
-                // Inny gracz może zjeść tego gracza
-                sendToPlayer(playerId, {
-                    type: 'eaten',
-                    by: other.nickname
-                });
+                broadcastPlayerEaten(otherId, player.nickname);
             }
         }
     });
+}
+
+function broadcastPlayerEaten(playerId, by) {
+    const player = players.get(playerId);
+    if (!player) return;
     
-    // Kolizja z pociskami
-    for (let i = bullets.length - 1; i >= 0; i--) {
-        const bullet = bullets[i];
-        if (bullet.ownerId === playerId) continue;
-        
-        const dist = getDistance(player.x, player.y, bullet.x, bullet.y);
-        
-        if (dist < player.r + bullet.r) {
-            if (player.r > bullet.r * 1.1) {
-                // Zjedz pocisk
-                player.r += bullet.r * 0.6;
-                bullets.splice(i, 1);
-                
-                sendToPlayer(playerId, {
-                    type: 'eatBullet',
-                    mass: Math.round(bullet.r * 0.6)
-                });
-            }
-        }
-    }
+    broadcast({
+        type: 'chat',
+        sender: 'SYSTEM',
+        message: `🍽️ ${by} zjadł ${player.nickname}!`,
+        color: '#FF9800',
+        timestamp: Date.now()
+    });
+    
+    players.delete(playerId);
+    voiceConnections.delete(playerId);
+    playerUpdateBuffer.delete(playerId);
+    lastUpdateTimes.delete(playerId);
 }
 
 function updateVoiceConnections(playerId) {
-    const player = players[playerId];
+    const player = players.get(playerId);
     if (!player) return;
     
-    const nearbyPlayers = Object.values(players).filter(p => {
-        if (p.id === playerId) return false;
-        const distance = getDistance(player.x, player.y, p.x, p.y);
-        return distance <= VOICE_RANGE;
-    });
+    const connections = voiceConnections.get(playerId) || new Set();
+    const newConnections = new Set();
     
-    const nearbyPlayerIds = new Set(nearbyPlayers.map(p => p.id));
-    const currentConnections = voiceConnections.get(playerId) || new Set();
+    // Sprawdź tylko raz na sekundę (nie co tick)
+    const now = Date.now();
+    const lastVoiceUpdate = lastUpdateTimes.get(`voice_${playerId}`) || 0;
     
-    // Dodaj nowe połączenia
-    nearbyPlayerIds.forEach(targetId => {
-        if (!currentConnections.has(targetId)) {
-            sendToPlayer(playerId, {
-                type: 'voiceConnect',
-                playerId: targetId,
-                nickname: players[targetId]?.nickname,
-                distance: getDistance(player.x, player.y, players[targetId].x, players[targetId].y)
-            });
+    if (now - lastVoiceUpdate < 1000) return;
+    lastUpdateTimes.set(`voice_${playerId}`, now);
+    
+    players.forEach((other, otherId) => {
+        if (otherId === playerId) return;
+        
+        const distanceSq = getDistance(player.x, player.y, other.x, other.y);
+        
+        if (distanceSq <= VOICE_RANGE * VOICE_RANGE) {
+            newConnections.add(otherId);
             
-            sendToPlayer(targetId, {
-                type: 'voiceConnect',
-                playerId: playerId,
-                nickname: player.nickname,
-                distance: getDistance(players[targetId].x, players[targetId].y, player.x, player.y)
-            });
-            
-            if (!voiceConnections.has(targetId)) {
-                voiceConnections.set(targetId, new Set());
+            if (!connections.has(otherId)) {
+                // Nowe połączenie
+                sendToPlayer(playerId, {
+                    type: 'voiceConnect',
+                    playerId: otherId,
+                    nickname: other.nickname,
+                    distance: Math.sqrt(distanceSq)
+                });
+                
+                sendToPlayer(otherId, {
+                    type: 'voiceConnect',
+                    playerId: playerId,
+                    nickname: player.nickname,
+                    distance: Math.sqrt(distanceSq)
+                });
+                
+                if (!voiceConnections.has(otherId)) {
+                    voiceConnections.set(otherId, new Set());
+                }
+                voiceConnections.get(otherId).add(playerId);
             }
-            voiceConnections.get(targetId).add(playerId);
-            currentConnections.add(targetId);
         }
     });
     
     // Usuń rozłączone połączenia
-    const toRemove = [];
-    currentConnections.forEach(targetId => {
-        if (!nearbyPlayerIds.has(targetId)) {
-            toRemove.push(targetId);
-            
+    connections.forEach(targetId => {
+        if (!newConnections.has(targetId)) {
             sendToPlayer(playerId, {
                 type: 'voiceDisconnect',
                 playerId: targetId
@@ -394,63 +381,59 @@ function updateVoiceConnections(playerId) {
         }
     });
     
-    toRemove.forEach(targetId => {
-        currentConnections.delete(targetId);
-    });
-    
-    if (currentConnections.size > 0) {
-        voiceConnections.set(playerId, currentConnections);
+    if (newConnections.size > 0) {
+        voiceConnections.set(playerId, newConnections);
     } else {
         voiceConnections.delete(playerId);
     }
 }
 
+// Optymalizacja: Batch updates
 function broadcast(data, excludeId = null) {
     const message = JSON.stringify(data);
     wss.clients.forEach(client => {
         if (client.readyState === WebSocket.OPEN) {
-            if (excludeId && players[excludeId]?.ws === client) {
+            if (excludeId && players.get(excludeId)?.ws === client) {
                 return;
             }
-            client.send(message);
+            try {
+                client.send(message);
+            } catch (err) {
+                console.error('Send error:', err);
+            }
         }
     });
 }
 
 function sendToPlayer(playerId, data) {
-    const player = players[playerId];
+    const player = players.get(playerId);
     if (player && player.ws && player.ws.readyState === WebSocket.OPEN) {
         try {
-            player.ws.send(JSON.stringify(data));
+            // Buforuj wiadomości dla gracza
+            if (!playerUpdateBuffer.has(playerId)) {
+                playerUpdateBuffer.set(playerId, []);
+            }
+            playerUpdateBuffer.get(playerId).push(data);
         } catch (err) {
-            console.error('❌ Error sending to player:', err);
+            console.error('Send to player error:', err);
         }
     }
 }
 
-function broadcastAudio(fromPlayerId, audioData, sequence) {
-    const player = players[fromPlayerId];
-    if (!player) return;
-    
-    const connections = voiceConnections.get(fromPlayerId);
-    if (!connections) return;
-    
-    connections.forEach(targetId => {
-        const target = players[targetId];
-        if (target) {
-            const distance = getDistance(player.x, player.y, target.x, target.y);
-            const volume = Math.max(0.1, 1 - (distance / VOICE_RANGE));
-            
-            sendToPlayer(targetId, {
-                type: 'voiceAudio',
-                from: fromPlayerId,
-                nickname: player.nickname,
-                audio: audioData,
-                sequence: sequence,
-                volume: volume,
-                distance: Math.round(distance),
-                timestamp: Date.now()
-            });
+function flushPlayerBuffers() {
+    playerUpdateBuffer.forEach((messages, playerId) => {
+        const player = players.get(playerId);
+        if (player && player.ws && player.ws.readyState === WebSocket.OPEN && messages.length > 0) {
+            try {
+                // Wyślij wszystkie zbuforowane wiadomości naraz
+                messages.forEach(message => {
+                    player.ws.send(JSON.stringify(message));
+                });
+                playerUpdateBuffer.set(playerId, []);
+            } catch (err) {
+                console.error('Flush buffer error:', err);
+                playerUpdateBuffer.delete(playerId);
+            }
         }
     });
 }
@@ -458,8 +441,20 @@ function broadcastAudio(fromPlayerId, audioData, sequence) {
 wss.on('connection', ws => {
     let playerId = null;
     let nickname = "Player";
+    let lastPing = Date.now();
     
     console.log('🔌 New WebSocket connection');
+    
+    // Ustaw timeout na nieaktywne połączenia
+    const connectionTimeout = setTimeout(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+            ws.close(1000, 'Connection timeout');
+        }
+    }, 30000);
+    
+    ws.on('pong', () => {
+        lastPing = Date.now();
+    });
     
     ws.on('message', async (msg) => {
         try {
@@ -470,7 +465,6 @@ wss.on('connection', ws => {
             } else if (Buffer.isBuffer(msg)) {
                 data = JSON.parse(msg.toString());
             } else {
-                console.error('Unknown message type:', typeof msg);
                 return;
             }
             
@@ -478,21 +472,26 @@ wss.on('connection', ws => {
                 playerId = data.id || Math.random().toString(36).substr(2, 9);
                 nickname = data.nickname || "Player" + playerId.substr(0, 4);
                 
-                players[playerId] = {
+                players.set(playerId, {
                     id: playerId,
                     nickname: nickname,
-                    x: randomPos(),
-                    y: randomPos(),
+                    x: Math.random() * MAP_SIZE,
+                    y: Math.random() * MAP_SIZE,
                     r: INITIAL_RADIUS,
                     color: data.color || '#' + Math.floor(Math.random()*16777215).toString(16),
                     ws: ws,
                     isSpeaking: false,
                     imageUrl: data.imageUrl || null,
                     lastSplit: 0,
-                    mass: INITIAL_RADIUS
-                };
+                    mass: INITIAL_RADIUS,
+                    lastMove: Date.now(),
+                    moveBuffer: []
+                });
                 
                 ws.playerId = playerId;
+                
+                // Inicjalizuj bufor dla gracza
+                playerUpdateBuffer.set(playerId, []);
                 
                 const welcomeMessage = {
                     type: 'chat',
@@ -515,9 +514,9 @@ wss.on('connection', ws => {
                     id: playerId,
                     mapSize: MAP_SIZE,
                     voiceRange: VOICE_RANGE,
-                    foods: foods.slice(0, 200),
-                    viruses: viruses,
-                    players: Object.values(players).map(p => ({
+                    foods: foods.slice(0, 150), // Mniej jedzenia na start
+                    viruses: viruses.slice(0, 10),
+                    players: Array.from(players.values()).map(p => ({
                         id: p.id,
                         nickname: p.nickname,
                         x: p.x,
@@ -525,7 +524,8 @@ wss.on('connection', ws => {
                         r: p.r,
                         color: p.color,
                         imageUrl: p.imageUrl
-                    }))
+                    })),
+                    serverTime: Date.now()
                 });
                 
                 sendToPlayer(playerId, {
@@ -533,32 +533,43 @@ wss.on('connection', ws => {
                     messages: chatHistory.slice(-20)
                 });
                 
-                console.log(`🎮 Player ${nickname} (${playerId}) joined, total: ${Object.keys(players).length}`);
+                console.log(`🎮 Player ${nickname} (${playerId}) joined, total: ${players.size}`);
             }
             
-            if (data.type === 'move' && playerId && players[playerId]) {
-                const player = players[playerId];
-                const oldX = player.x;
-                const oldY = player.y;
-                
-                const speed = getSpeed(player.r);
-                player.x += data.dx * speed;
-                player.y += data.dy * speed;
-                
-                player.x = Math.max(player.r, Math.min(MAP_SIZE - player.r, player.x));
-                player.y = Math.max(player.r, Math.min(MAP_SIZE - player.r, player.y));
-                
-                if (oldX !== player.x || oldY !== player.y) {
-                    updateVoiceConnections(playerId);
-                    checkCollisions(playerId);
-                }
-            }
-            
-            if (data.type === 'shoot' && playerId && players[playerId]) {
-                const player = players[playerId];
+            if (data.type === 'move' && playerId && players.has(playerId)) {
+                const player = players.get(playerId);
                 const now = Date.now();
                 
-                // Sprawdź cooldown
+                // Client-side prediction correction
+                if (data.clientTime && Math.abs(now - data.clientTime) > 100) {
+                    // Synchronizuj czas
+                    sendToPlayer(playerId, {
+                        type: 'timeSync',
+                        serverTime: now,
+                        clientTime: data.clientTime
+                    });
+                }
+                
+                // Buforuj ruchy i aplikuj je w ticku gry
+                if (!player.moveBuffer) player.moveBuffer = [];
+                player.moveBuffer.push({
+                    dx: data.dx,
+                    dy: data.dy,
+                    timestamp: now
+                });
+                
+                // Ogranicz bufor ruchów
+                if (player.moveBuffer.length > 10) {
+                    player.moveBuffer = player.moveBuffer.slice(-5);
+                }
+                
+                player.lastMove = now;
+            }
+            
+            if (data.type === 'shoot' && playerId && players.has(playerId)) {
+                const player = players.get(playerId);
+                const now = Date.now();
+                
                 if (now - player.lastSplit < SPLIT_COOLDOWN) {
                     sendToPlayer(playerId, {
                         type: 'cooldown',
@@ -567,7 +578,6 @@ wss.on('connection', ws => {
                     return;
                 }
                 
-                // Minimalny rozmiar do strzelania
                 if (player.r < 40) {
                     sendToPlayer(playerId, {
                         type: 'error',
@@ -576,7 +586,6 @@ wss.on('connection', ws => {
                     return;
                 }
                 
-                // Utwórz pocisk (10% masy gracza)
                 const bulletMass = player.r * 0.1;
                 player.r -= bulletMass;
                 player.lastSplit = now;
@@ -584,13 +593,13 @@ wss.on('connection', ws => {
                 const angle = Math.atan2(data.mouseY - data.playerY, data.mouseX - data.playerX);
                 const bullet = {
                     id: `bullet_${playerId}_${Date.now()}`,
-                    x: player.x + Math.cos(angle) * (player.r + 10),
-                    y: player.y + Math.sin(angle) * (player.r + 10),
+                    x: player.x + Math.cos(angle) * (player.r + 15),
+                    y: player.y + Math.sin(angle) * (player.r + 15),
                     r: bulletMass,
                     color: player.color,
                     ownerId: playerId,
                     angle: angle,
-                    speed: 8,
+                    speed: 10,
                     createdAt: now
                 };
                 
@@ -598,14 +607,13 @@ wss.on('connection', ws => {
                 
                 sendToPlayer(playerId, {
                     type: 'bulletFired',
-                    mass: Math.round(bulletMass)
+                    mass: Math.round(bulletMass),
+                    serverTime: now
                 });
-                
-                console.log(`💥 ${player.nickname} wystrzelił kulkę (${Math.round(bulletMass)} masy)`);
             }
             
-            if (data.type === 'chat' && playerId && players[playerId]) {
-                const player = players[playerId];
+            if (data.type === 'chat' && playerId && players.has(playerId)) {
+                const player = players.get(playerId);
                 const message = data.message?.trim();
                 
                 if (message && message.length > 0 && message.length <= 200) {
@@ -624,13 +632,11 @@ wss.on('connection', ws => {
                     }
                     
                     broadcast(chatMessage);
-                    
-                    console.log(`💬 [CHAT] ${player.nickname}: ${message}`);
                 }
             }
             
-            if (data.type === 'emoji' && playerId && players[playerId]) {
-                const player = players[playerId];
+            if (data.type === 'emoji' && playerId && players.has(playerId)) {
+                const player = players.get(playerId);
                 const emojiMessage = {
                     type: 'chat',
                     sender: player.nickname,
@@ -648,16 +654,42 @@ wss.on('connection', ws => {
                 broadcast(emojiMessage);
             }
             
-            if (data.type === 'voiceAudio' && playerId && players[playerId]) {
+            if (data.type === 'voiceAudio' && playerId && players.has(playerId)) {
                 const audioSize = data.audio?.length || 0;
                 
-                if (data.audio && audioSize > 10) {
-                    broadcastAudio(playerId, data.audio, data.sequence || 0);
+                if (data.audio && audioSize > 10 && audioSize < 50000) {
+                    const player = players.get(playerId);
+                    const connections = voiceConnections.get(playerId);
+                    
+                    if (connections) {
+                        const voiceData = {
+                            type: 'voiceAudio',
+                            from: playerId,
+                            nickname: player.nickname,
+                            audio: data.audio,
+                            sequence: data.sequence || 0,
+                            timestamp: Date.now()
+                        };
+                        
+                        connections.forEach(targetId => {
+                            const target = players.get(targetId);
+                            if (target) {
+                                const distance = getDistanceSqrt(player.x, player.y, target.x, target.y);
+                                const volume = Math.max(0.1, 1 - (distance / VOICE_RANGE));
+                                
+                                sendToPlayer(targetId, {
+                                    ...voiceData,
+                                    volume: volume,
+                                    distance: Math.round(distance)
+                                });
+                            }
+                        });
+                    }
                 }
             }
             
-            if (data.type === 'voiceStatus' && playerId && players[playerId]) {
-                const player = players[playerId];
+            if (data.type === 'voiceStatus' && playerId && players.has(playerId)) {
+                const player = players.get(playerId);
                 player.isSpeaking = data.status === 'talking';
                 
                 const connections = voiceConnections.get(playerId);
@@ -677,7 +709,8 @@ wss.on('connection', ws => {
             if (data.type === 'ping') {
                 sendToPlayer(playerId, {
                     type: 'pong',
-                    timestamp: Date.now()
+                    timestamp: Date.now(),
+                    serverTime: Date.now()
                 });
             }
             
@@ -687,29 +720,13 @@ wss.on('connection', ws => {
     });
     
     ws.on('close', () => {
-        console.log(`🔌 WebSocket closed for ${playerId}`);
+        clearTimeout(connectionTimeout);
         
-        if (playerId && players[playerId]) {
-            const playerName = players[playerId].nickname;
+        if (playerId && players.has(playerId)) {
+            const player = players.get(playerId);
+            const playerName = player.nickname;
             
-            const connections = voiceConnections.get(playerId);
-            if (connections) {
-                connections.forEach(targetId => {
-                    sendToPlayer(targetId, {
-                        type: 'voiceDisconnect',
-                        playerId: playerId
-                    });
-                    
-                    if (voiceConnections.has(targetId)) {
-                        voiceConnections.get(targetId).delete(playerId);
-                        if (voiceConnections.get(targetId).size === 0) {
-                            voiceConnections.delete(targetId);
-                        }
-                    }
-                });
-                voiceConnections.delete(playerId);
-            }
-            
+            // Powiadom o rozłączeniu
             const goodbyeMessage = {
                 type: 'chat',
                 sender: 'SYSTEM',
@@ -725,82 +742,204 @@ wss.on('connection', ws => {
             
             broadcast(goodbyeMessage, playerId);
             
+            // Wyczyść wszystkie połączenia głosowe
+            const connections = voiceConnections.get(playerId);
+            if (connections) {
+                connections.forEach(targetId => {
+                    sendToPlayer(targetId, {
+                        type: 'voiceDisconnect',
+                        playerId: playerId
+                    });
+                    
+                    if (voiceConnections.has(targetId)) {
+                        voiceConnections.get(targetId).delete(playerId);
+                        if (voiceConnections.get(targetId).size === 0) {
+                            voiceConnections.delete(targetId);
+                        }
+                    }
+                });
+            }
+            
+            // Usuń gracza
+            players.delete(playerId);
+            voiceConnections.delete(playerId);
+            playerUpdateBuffer.delete(playerId);
+            lastUpdateTimes.delete(playerId);
+            
             console.log(`🎮 Player ${playerName} (${playerId}) disconnected`);
-            delete players[playerId];
         }
     });
     
     ws.on('error', (err) => {
         console.error('❌ WebSocket error:', err);
+        clearTimeout(connectionTimeout);
     });
+    
+    // Ping-pong dla utrzymania połączenia
+    const pingInterval = setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+            try {
+                ws.ping();
+            } catch (err) {
+                clearInterval(pingInterval);
+            }
+        } else {
+            clearInterval(pingInterval);
+        }
+    }, 15000);
 });
 
-// Główna pętla gry
-setInterval(() => {
-    // Aktualizuj wirusy
-    updateViruses();
+// Główna pętla gry - ZWIĘKSZONA CZĘSTOTLIWOŚĆ
+const TICK_INTERVAL = 1000 / TICK_RATE;
+let lastTick = Date.now();
+
+function gameTick() {
+    const now = Date.now();
+    const deltaTime = Math.min(100, now - lastTick) / 1000; // Ogranicz delta time
+    
+    // Aktualizuj pozycje graczy z bufora ruchów
+    players.forEach((player, playerId) => {
+        if (player.moveBuffer && player.moveBuffer.length > 0) {
+            // Uśrednij ruchy z bufora
+            let totalDx = 0;
+            let totalDy = 0;
+            let validMoves = 0;
+            
+            player.moveBuffer.forEach(move => {
+                if (now - move.timestamp < 200) { // Używaj tylko świeżych ruchów
+                    totalDx += move.dx;
+                    totalDy += move.dy;
+                    validMoves++;
+                }
+            });
+            
+            if (validMoves > 0) {
+                const avgDx = totalDx / validMoves;
+                const avgDy = totalDy / validMoves;
+                
+                const speed = getSpeed(player.r);
+                const moveX = avgDx * speed * deltaTime * 60; // Skalowanie do FPS
+                const moveY = avgDy * speed * deltaTime * 60;
+                
+                if (Math.abs(moveX) > 0.1 || Math.abs(moveY) > 0.1) {
+                    player.x += moveX;
+                    player.y += moveY;
+                    
+                    // Ograniczenia mapy
+                    player.x = Math.max(player.r, Math.min(MAP_SIZE - player.r, player.x));
+                    player.y = Math.max(player.r, Math.min(MAP_SIZE - player.r, player.y));
+                    
+                    // Sprawdź kolizje
+                    checkCollisions(playerId);
+                    
+                    // Aktualizuj voice connections (rzadziej)
+                    if (now % 3 === 0) { // Co 3 ticki
+                        updateVoiceConnections(playerId);
+                    }
+                }
+            }
+            
+            // Oczyść stary bufor
+            player.moveBuffer = player.moveBuffer.filter(move => now - move.timestamp < 200);
+        }
+    });
+    
+    // Aktualizuj wirusy (rzadziej)
+    if (now % 2 === 0) {
+        updateViruses();
+    }
     
     // Aktualizuj pociski
     updateBullets();
     
-    // Sprawdzaj kolizje dla wszystkich graczy
-    Object.keys(players).forEach(playerId => {
-        checkCollisions(playerId);
-    });
-    
-    // Przygotuj dane do wysłania
+    // Przygotuj dane do wysłania (tylko niezbędne informacje)
     const gameState = {
         type: 'gameState',
-        players: Object.values(players).map(p => ({
+        players: Array.from(players.values()).map(p => ({
             id: p.id,
-            nickname: p.nickname,
-            x: p.x,
-            y: p.y,
-            r: p.r,
+            x: Math.round(p.x * 10) / 10, // Zaokrąglenie dla mniejszego payload
+            y: Math.round(p.y * 10) / 10,
+            r: Math.round(p.r),
             color: p.color,
-            imageUrl: p.imageUrl,
             isSpeaking: p.isSpeaking || false
         })),
-        foods: foods.slice(0, 300),
-        viruses: viruses,
-        bullets: bullets,
-        timestamp: Date.now()
+        foods: foods.slice(0, 200).map(f => ({
+            x: Math.round(f.x),
+            y: Math.round(f.y),
+            r: Math.round(f.r),
+            color: f.color,
+            type: f.type
+        })),
+        viruses: viruses.slice(0, 15).map(v => ({
+            x: Math.round(v.x),
+            y: Math.round(v.y),
+            r: Math.round(v.r)
+        })),
+        bullets: bullets.map(b => ({
+            x: Math.round(b.x),
+            y: Math.round(b.y),
+            r: Math.round(b.r),
+            color: b.color,
+            ownerId: b.ownerId
+        })),
+        timestamp: now,
+        tick: Math.floor(now / TICK_INTERVAL)
     };
     
-    const message = JSON.stringify(gameState);
+    // Kompresuj stan gry
+    const compressedState = JSON.stringify(gameState);
     
     // Wyślij do wszystkich klientów
     wss.clients.forEach(client => {
         if (client.readyState === WebSocket.OPEN) {
             try {
-                client.send(message);
+                client.send(compressedState);
             } catch (err) {
-                console.error('❌ Error sending game state:', err);
+                // Ignoruj błędy wysyłania
             }
         }
     });
-}, 50);
+    
+    // Wyślij zbuforowane wiadomości
+    flushPlayerBuffers();
+    
+    lastTick = now;
+}
+
+// Uruchom pętlę gry z fixed timestep
+setInterval(gameTick, TICK_INTERVAL);
 
 // Respawn jedzenia
 setInterval(() => {
-    if (foods.length < FOOD_COUNT * 0.8) {
-        const toSpawn = Math.min(50, FOOD_COUNT - foods.length);
+    if (foods.length < FOOD_COUNT * 0.7) {
+        const toSpawn = Math.min(30, FOOD_COUNT - foods.length);
         spawnFood(toSpawn);
-        console.log(`🍎 Respawned ${toSpawn} food`);
     }
-}, 5000);
+}, 3000);
 
 // Respawn wirusów
 setInterval(() => {
     if (viruses.length < VIRUS_COUNT * 0.8) {
-        const toSpawn = Math.min(5, VIRUS_COUNT - viruses.length);
+        const toSpawn = Math.min(3, VIRUS_COUNT - viruses.length);
         for (let i = 0; i < toSpawn; i++) {
             spawnVirus();
         }
-        console.log(`🦠 Respawned ${toSpawn} viruses`);
     }
+}, 8000);
+
+// Czyszczenie nieaktywnych graczy
+setInterval(() => {
+    const now = Date.now();
+    players.forEach((player, playerId) => {
+        if (now - player.lastMove > 30000) { // 30 sekund bez ruchu
+            players.delete(playerId);
+            voiceConnections.delete(playerId);
+            playerUpdateBuffer.delete(playerId);
+            console.log(`🕒 Player ${player.nickname} kicked for inactivity`);
+        }
+    });
 }, 10000);
 
-console.log(`✅ Server started on port ${PORT}`);
-console.log(`🎮 Game features: Food (${FOOD_COUNT}), Viruses (${VIRUS_COUNT}), Shooting, Voice Chat`);
-console.log(`🎤 Voice Chat enabled with ${VOICE_RANGE/10}m range`);
+console.log(`✅ Server started on port ${PORT} (${TICK_RATE} FPS)`);
+console.log(`🎮 Game optimized for low latency`);
+console.log(`📊 Expected players: ${Math.floor(1000000 / (players.size * 100))}`); // Przybliżona pojemność
