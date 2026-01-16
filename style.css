@@ -980,3 +980,127 @@ canvas {
         height: 40px;
     }
 }
+/* Dodaj na końcu pliku style.css */
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+@keyframes slideInUp {
+    from { 
+        opacity: 0;
+        transform: translateY(50px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideOutDown {
+    from { 
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to { 
+        opacity: 0;
+        transform: translateY(50px);
+    }
+}
+
+.headphone-icon {
+    color: #4CAF50;
+    font-size: 0.9rem;
+    margin-left: 5px;
+}
+
+.speaker-icon {
+    color: #FF9800;
+    font-size: 0.9rem;
+    margin-left: 5px;
+}
+
+/* Poprawiona minimapa */
+.minimap-container {
+    position: absolute;
+    top: 90px;
+    left: 20px;
+    z-index: 99;
+}
+
+.minimap {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 10px;
+    padding: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    border: 2px solid #333;
+}
+
+.minimap-header {
+    font-size: 0.9rem;
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: #333;
+    text-align: center;
+}
+
+/* Poprawiony HUD */
+.hud {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 20px;
+    padding: 15px 30px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    z-index: 100;
+    min-width: 600px;
+    justify-content: center;
+}
+
+.player-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.game-stats {
+    display: flex;
+    gap: 30px;
+    align-items: center;
+}
+
+/* Responsywność */
+@media (max-width: 768px) {
+    .hud {
+        flex-direction: column;
+        gap: 10px;
+        min-width: auto;
+        left: 10px;
+        right: 10px;
+        transform: none;
+        padding: 10px;
+    }
+    
+    .game-stats {
+        justify-content: space-between;
+        width: 100%;
+    }
+    
+    .minimap-container {
+        top: auto;
+        bottom: 100px;
+        left: 10px;
+    }
+}
