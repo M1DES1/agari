@@ -64,14 +64,14 @@
             <div class="bg-circle" style="top: 40%; left: 40%; animation-delay: 2s;"></div>
         </div>
         
-        <!-- Modal testu mikrofonu -->
+        <!-- Modal testu mikrofonu z echem -->
         <div id="micTestModal" class="mic-test-modal">
             <div class="mic-test-content">
                 <div class="mic-test-header">
                     <div class="mic-test-icon">
                         <i class="fas fa-microphone"></i>
                     </div>
-                    <h2>Test Mikrofonu i Dźwięku</h2>
+                    <h2>Test Mikrofonu z Echem w Czasie Rzeczywistym</h2>
                     <button class="mic-test-close" id="closeMicTest">&times;</button>
                 </div>
                 
@@ -88,16 +88,36 @@
                     </div>
                     
                     <div class="test-section">
-                        <h3><i class="fas fa-microphone-alt"></i> Test Mikrofonu</h3>
-                        <p>Kliknij "Rozpocznij test" i mów do mikrofonu. Zobaczysz poziom dźwięku:</p>
+                        <h3><i class="fas fa-microphone-alt"></i> Test Mikrofonu z Echem</h3>
+                        <p><strong>NOWOŚĆ: Test z echem w czasie rzeczywistym!</strong><br>
+                        Mów do mikrofonu i usłysz swój głos w głośnikach. Użyj słuchawek aby uniknąć sprzężenia.</p>
                         
                         <div class="mic-test-controls">
                             <button id="startMicTest" class="test-btn test-btn-primary">
-                                <i class="fas fa-record-vinyl"></i> Rozpocznij test mikrofonu
+                                <i class="fas fa-record-vinyl"></i> Rozpocznij test mikrofonu z echem
                             </button>
                             <button id="stopMicTest" class="test-btn test-btn-secondary" disabled>
                                 <i class="fas fa-stop"></i> Zatrzymaj test
                             </button>
+                        </div>
+                        
+                        <!-- Kontrolka głośności echa -->
+                        <div id="echoVolumeControl" style="display: none; margin-top: 15px; padding: 15px; background: rgba(33, 150, 243, 0.1); border-radius: 10px; border: 1px solid rgba(33, 150, 243, 0.3);">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                                <div style="display: flex; align-items: center; gap: 10px; color: #2196F3;">
+                                    <i class="fas fa-volume-up"></i>
+                                    <span style="font-weight: bold;">Głośność echa</span>
+                                </div>
+                                <span id="volumeValue" style="font-weight: bold; color: #2196F3;">50%</span>
+                            </div>
+                            <input type="range" id="volumeSlider" min="0" max="100" value="50" style="width: 100%;">
+                            <div style="display: flex; justify-content: space-between; margin-top: 5px; color: #666; font-size: 0.9rem;">
+                                <span>Cicho</span>
+                                <span>Głośno</span>
+                            </div>
+                            <div style="margin-top: 10px; font-size: 0.85rem; color: #666;">
+                                <i class="fas fa-info-circle"></i> Użyj słuchawek aby uniknąć sprzężenia
+                            </div>
                         </div>
                         
                         <div class="volume-visualizer">
@@ -123,13 +143,13 @@
                     </div>
                     
                     <div class="test-instructions">
-                        <h4><i class="fas fa-lightbulb"></i> Wskazówki:</h4>
+                        <h4><i class="fas fa-lightbulb"></i> Wskazówki do testu ECHO:</h4>
                         <ul>
-                            <li><strong>Test dźwięku</strong> - sprawdza czy słyszysz dźwięk z głośników/słuchawek</li>
-                            <li><strong>Test mikrofonu</strong> - sprawdza czy mikrofon poprawnie rejestruje dźwięk</li>
+                            <li><strong>Test echo</strong> - mów do mikrofonu, usłyszysz swój głos w głośnikach</li>
+                            <li><strong>Użyj suwaka</strong> - dostosuj głośność echa do swoich preferencji</li>
                             <li><strong>Zielone paski</strong> - pokazują aktywność twojego mikrofonu</li>
-                            <li><strong>Jeśli nie słyszysz</strong> - sprawdź głośność systemu i ustawienia przeglądarki</li>
-                            <li><strong>Jeśli mikrofon nie działa</strong> - sprawdź uprawnienia przeglądarki</li>
+                            <li><strong>Włącz słuchawki</strong> - aby uniknąć sprzężenia zwrotnego</li>
+                            <li><strong>Jeśli nie słyszysz swojego głosu</strong> - sprawdź głośność systemu</li>
                         </ul>
                     </div>
                 </div>
@@ -233,14 +253,14 @@
                         <div class="test-microphone-section">
                             <div class="test-header">
                                 <i class="fas fa-vial"></i>
-                                <h4>Przetestuj swój mikrofon</h4>
+                                <h4>Przetestuj swój mikrofon z echem</h4>
                             </div>
                             <p class="test-description">
-                                Upewnij się, że mikrofon i głośniki działają poprawnie przed rozpoczęciem gry.
+                                <strong>NOWOŚĆ:</strong> Test z echem w czasie rzeczywistym! Mów do mikrofonu i słuchaj swojego głosu.
                             </p>
                             <button id="openMicTest" class="test-mic-btn">
                                 <i class="fas fa-microphone-alt"></i>
-                                Testuj mikrofon i dźwięk
+                                Testuj mikrofon z echem
                             </button>
                         </div>
                         
@@ -355,7 +375,7 @@
                 
                 <div class="game-tip">
                     <i class="fas fa-lightbulb"></i>
-                    <p><strong>Tip:</strong> Przetestuj mikrofon przed grą! Voice chat działa tylko z graczami w promieniu 20m.</p>
+                    <p><strong>Nowość:</strong> Przetestuj mikrofon z echem przed grą! Usłyszysz swój głos w czasie rzeczywistym.</p>
                 </div>
             </div>
             
@@ -370,15 +390,15 @@
                 </div>
                 <button id="quickTestBtn" class="quick-test-btn">
                     <i class="fas fa-bolt"></i>
-                    Szybki test
+                    Test z echem
                 </button>
             </div>
             
             <div class="footer-info">
-                <div class="version">v3.1 • Voice Chat z Testem Mikrofonu</div>
+                <div class="version">v3.2 • Voice Chat z Testem Echa</div>
                 <div class="creator">
                     <i class="fas fa-code"></i>
-                    Przetestuj mikrofon przed rozpoczęciem gry
+                    Test z echem w czasie rzeczywistym
                 </div>
             </div>
         </div>
@@ -397,8 +417,10 @@
             const testSoundBtn = document.getElementById('testSoundBtn');
             const startMicTestBtn = document.getElementById('startMicTest');
             const stopMicTestBtn = document.getElementById('stopMicTest');
+            const volumeSlider = document.getElementById('volumeSlider');
+            const volumeValue = document.getElementById('volumeValue');
             
-            // Zmienne dla testu mikrofonu
+            // Zmienne dla testu mikrofonu z echem
             let audioContext = null;
             let analyser = null;
             let microphone = null;
@@ -406,6 +428,7 @@
             let isTesting = false;
             let audioTested = false;
             let micTested = false;
+            let gainNode = null;
             
             // Animacja przycisku gry
             playBtn.addEventListener('mouseenter', function() {
@@ -488,7 +511,7 @@
                 }, 200);
             });
             
-            // Test mikrofonu - otwórz modal
+            // Test mikrofonu z echem - otwórz modal
             openMicTestBtn.addEventListener('click', openMicTestModal);
             quickTestBtn.addEventListener('click', openMicTestModal);
             
@@ -506,9 +529,24 @@
             // Test dźwięku
             testSoundBtn.addEventListener('click', testSound);
             
-            // Test mikrofonu
+            // Test mikrofonu z echem
             startMicTestBtn.addEventListener('click', startMicTest);
             stopMicTestBtn.addEventListener('click', stopMicTest);
+            
+            // Suwak głośności echa
+            if (volumeSlider) {
+                volumeSlider.addEventListener('input', function() {
+                    const value = parseInt(this.value);
+                    if (volumeValue) {
+                        volumeValue.textContent = `${value}%`;
+                    }
+                    
+                    // Zaktualizuj głośność echa w czasie rzeczywistym
+                    if (gainNode && audioContext) {
+                        gainNode.gain.value = value / 100;
+                    }
+                });
+            }
             
             // Inicjalizuj paski głośności
             initVolumeBars();
@@ -521,7 +559,13 @@
                 audioTested = false;
                 micTested = false;
                 updateSoundTestResult();
-                updateFeedbackMessage('Rozpocznij testy aby sprawdzić swój mikrofon i dźwięk', 'info');
+                updateFeedbackMessage('Rozpocznij testy aby sprawdzić swój mikrofon z echem', 'info');
+                
+                // Ukryj kontrolkę głośności
+                const volumeControl = document.getElementById('echoVolumeControl');
+                if (volumeControl) {
+                    volumeControl.style.display = 'none';
+                }
             }
             
             function closeMicTestModal() {
@@ -586,7 +630,7 @@
                     // Poproś o dostęp do mikrofonu
                     mediaStream = await navigator.mediaDevices.getUserMedia({
                         audio: {
-                            echoCancellation: true,
+                            echoCancellation: false, // Wyłącz echo cancellation dla testu
                             noiseSuppression: true,
                             autoGainControl: true,
                             channelCount: 1
@@ -601,9 +645,15 @@
                     analyser.fftSize = 256;
                     analyser.smoothingTimeConstant = 0.8;
                     
-                    // Podłącz mikrofon do analizatora
+                    // Stwórz węzeł głośności dla wyjścia
+                    gainNode = audioContext.createGain();
+                    gainNode.gain.value = 0.5; // 50% głośności dla komfortu
+                    
+                    // Podłącz mikrofon do analizatora I do wyjścia (echo)
                     microphone = audioContext.createMediaStreamSource(mediaStream);
                     microphone.connect(analyser);
+                    microphone.connect(gainNode);
+                    gainNode.connect(audioContext.destination); // Podłącz do głośników
                     
                     // Zmień stan przycisków
                     startMicTestBtn.disabled = true;
@@ -611,9 +661,15 @@
                     startMicTestBtn.innerHTML = '<i class="fas fa-microphone"></i> Test w trakcie...';
                     startMicTestBtn.style.background = 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)';
                     
+                    // Pokaż kontrolkę głośności
+                    const volumeControl = document.getElementById('echoVolumeControl');
+                    if (volumeControl) {
+                        volumeControl.style.display = 'block';
+                    }
+                    
                     // Aktualizuj status
                     updateMicStatus('active');
-                    updateFeedbackMessage('🗣️ Mów do mikrofonu! Poniżej zobaczysz poziom dźwięku.', 'info');
+                    updateFeedbackMessage('🗣️ Mów do mikrofonu! Usłyszysz swój głos w głośnikach.', 'info');
                     
                     // Rozpocznij animację pasków
                     isTesting = true;
@@ -632,6 +688,12 @@
             function stopMicTest() {
                 isTesting = false;
                 
+                // Ukryj kontrolkę głośności
+                const volumeControl = document.getElementById('echoVolumeControl');
+                if (volumeControl) {
+                    volumeControl.style.display = 'none';
+                }
+                
                 // Zatrzymaj stream
                 if (mediaStream) {
                     mediaStream.getTracks().forEach(track => track.stop());
@@ -642,12 +704,13 @@
                 if (audioContext) {
                     audioContext.close();
                     audioContext = null;
+                    gainNode = null;
                 }
                 
                 // Resetuj przyciski
                 startMicTestBtn.disabled = false;
                 stopMicTestBtn.disabled = true;
-                startMicTestBtn.innerHTML = '<i class="fas fa-record-vinyl"></i> Rozpocznij test mikrofonu';
+                startMicTestBtn.innerHTML = '<i class="fas fa-record-vinyl"></i> Rozpocznij test mikrofonu z echem';
                 startMicTestBtn.style.background = '';
                 
                 // Resetuj paski
@@ -657,12 +720,14 @@
                 updateMicStatus('inactive');
                 
                 if (micTested) {
-                    updateFeedbackMessage('✅ Test mikrofonu zakończony. Mikrofon działa poprawnie!', 'success');
+                    updateFeedbackMessage('✅ Test mikrofonu z echem zakończony. Mikrofon działa poprawnie!', 'success');
                 }
             }
             
             function initVolumeBars() {
                 const volumeBars = document.getElementById('volumeBars');
+                if (!volumeBars) return;
+                
                 volumeBars.innerHTML = '';
                 
                 for (let i = 0; i < 20; i++) {
@@ -689,7 +754,10 @@
                 const volumePercent = Math.min(100, Math.round((average / 128) * 100));
                 
                 // Aktualizuj poziom dźwięku
-                document.getElementById('volumeLevel').textContent = `${volumePercent}%`;
+                const volumeLevel = document.getElementById('volumeLevel');
+                if (volumeLevel) {
+                    volumeLevel.textContent = `${volumePercent}%`;
+                }
                 
                 // Aktualizuj paski
                 const bars = document.querySelectorAll('.volume-bar');
@@ -730,11 +798,15 @@
                     bar.style.animationPlayState = 'paused';
                 });
                 
-                document.getElementById('volumeLevel').textContent = '0%';
+                const volumeLevel = document.getElementById('volumeLevel');
+                if (volumeLevel) {
+                    volumeLevel.textContent = '0%';
+                }
             }
             
             function updateMicStatus(status) {
                 const micStatus = document.getElementById('micStatus');
+                if (!micStatus) return;
                 
                 switch(status) {
                     case 'active':
@@ -754,6 +826,7 @@
             
             function updateSoundTestResult() {
                 const resultElement = document.getElementById('soundTestResult');
+                if (!resultElement) return;
                 
                 if (audioTested) {
                     resultElement.innerHTML = '<i class="fas fa-check-circle"></i> ✅ Dźwięk działa poprawnie';
@@ -768,6 +841,8 @@
             
             function updateFeedbackMessage(message, type) {
                 const feedbackElement = document.getElementById('feedbackMessage');
+                if (!feedbackElement) return;
+                
                 feedbackElement.innerHTML = `<i class="fas fa-${getIconForType(type)}"></i> ${message}`;
                 
                 switch(type) {
@@ -864,6 +939,8 @@
                 const statusText = document.getElementById('statusText');
                 const statusDot = document.querySelector('.status-dot');
                 
+                if (!statusText || !statusDot) return;
+                
                 try {
                     statusText.textContent = "🟡 Łączenie z serwerem...";
                     statusDot.style.background = '#FFC107';
@@ -881,429 +958,5 @@
             }
         });
     </script>
-    
-    <style>
-        /* MODAL TESTU MIKROFONU */
-        .mic-test-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            z-index: 10000;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-            animation: fadeIn 0.3s ease-out;
-        }
-        
-        .mic-test-content {
-            background: linear-gradient(135deg, #1a237e 0%, #311b92 100%);
-            border-radius: 20px;
-            width: 100%;
-            max-width: 800px;
-            color: white;
-            overflow: hidden;
-            box-shadow: 0 25px 75px rgba(0,0,0,0.7);
-            border: 2px solid #3949ab;
-            animation: slideInUp 0.5s ease-out;
-        }
-        
-        .mic-test-header {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 25px 30px;
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .mic-test-icon {
-            font-size: 2.5rem;
-            color: #bb86fc;
-            background: rgba(187, 134, 252, 0.1);
-            width: 70px;
-            height: 70px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .mic-test-header h2 {
-            margin: 0;
-            flex: 1;
-            font-size: 1.8rem;
-            color: #bb86fc;
-        }
-        
-        .mic-test-close {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 2.5rem;
-            cursor: pointer;
-            padding: 0;
-            width: 50px;
-            height: 50px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            transition: all 0.3s;
-        }
-        
-        .mic-test-close:hover {
-            background: rgba(255, 255, 255, 0.1);
-            transform: rotate(90deg);
-        }
-        
-        .mic-test-body {
-            padding: 30px;
-            max-height: 60vh;
-            overflow-y: auto;
-        }
-        
-        .test-section {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 25px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .test-section h3 {
-            margin: 0 0 15px 0;
-            color: #bb86fc;
-            font-size: 1.4rem;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .test-section p {
-            margin: 0 0 20px 0;
-            color: #e1e1e1;
-            line-height: 1.5;
-        }
-        
-        .test-btn {
-            background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
-            color: white;
-            border: none;
-            padding: 15px 25px;
-            border-radius: 10px;
-            font-size: 1.1rem;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            transition: all 0.3s;
-            font-weight: bold;
-            margin-right: 10px;
-        }
-        
-        .test-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 20px rgba(33, 150, 243, 0.3);
-        }
-        
-        .test-btn:active {
-            transform: translateY(-1px);
-        }
-        
-        .test-btn-primary {
-            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-        }
-        
-        .test-btn-secondary {
-            background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
-        }
-        
-        .sound-test-result {
-            margin-top: 15px;
-            padding: 15px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            color: #e1e1e1;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .mic-test-controls {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 25px;
-            flex-wrap: wrap;
-        }
-        
-        .volume-visualizer {
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .volume-bars {
-            display: flex;
-            align-items: flex-end;
-            justify-content: center;
-            gap: 8px;
-            height: 120px;
-            margin-bottom: 20px;
-            padding: 20px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 10px;
-        }
-        
-        .volume-bar {
-            width: 20px;
-            background: #e0e0e0;
-            border-radius: 10px;
-            transition: height 0.1s, background 0.3s;
-        }
-        
-        .volume-info {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .volume-level {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 1.1rem;
-        }
-        
-        .volume-level strong {
-            font-size: 1.5rem;
-            color: #4CAF50;
-        }
-        
-        .mic-status {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 1.1rem;
-        }
-        
-        .mic-test-feedback {
-            margin-top: 20px;
-        }
-        
-        .feedback-message {
-            padding: 15px 20px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            font-size: 1.1rem;
-            transition: all 0.3s;
-        }
-        
-        .test-instructions {
-            background: rgba(255, 193, 7, 0.1);
-            border: 1px solid rgba(255, 193, 7, 0.3);
-            border-radius: 15px;
-            padding: 20px;
-            margin-top: 30px;
-        }
-        
-        .test-instructions h4 {
-            margin: 0 0 15px 0;
-            color: #FFC107;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .test-instructions ul {
-            margin: 0;
-            padding-left: 20px;
-            color: #ffe0b2;
-        }
-        
-        .test-instructions li {
-            margin-bottom: 8px;
-            line-height: 1.4;
-        }
-        
-        .mic-test-footer {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 25px 30px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .finish-btn {
-            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-            color: white;
-            border: none;
-            padding: 15px 40px;
-            border-radius: 10px;
-            font-size: 1.2rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            transition: all 0.3s;
-            font-weight: bold;
-        }
-        
-        .finish-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 20px rgba(76, 175, 80, 0.3);
-        }
-        
-        .test-hint {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            color: #FFC107;
-            font-size: 0.9rem;
-            opacity: 0.8;
-        }
-        
-        /* SEKCJA TESTU MIKROFONU W MENU */
-        .test-microphone-section {
-            background: rgba(33, 150, 243, 0.1);
-            border-radius: 12px;
-            padding: 20px;
-            margin: 20px 0;
-            border: 1px solid rgba(33, 150, 243, 0.2);
-        }
-        
-        .test-header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 10px;
-            color: #2196F3;
-        }
-        
-        .test-header h4 {
-            margin: 0;
-            font-size: 1.2rem;
-        }
-        
-        .test-description {
-            color: #555;
-            font-size: 0.95rem;
-            margin-bottom: 15px;
-            line-height: 1.5;
-        }
-        
-        .test-mic-btn {
-            background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 8px;
-            font-size: 1rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            transition: all 0.3s;
-            width: 100%;
-            justify-content: center;
-            font-weight: bold;
-        }
-        
-        .test-mic-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(33, 150, 243, 0.3);
-        }
-        
-        /* SZYBKI TEST */
-        .quick-test-btn {
-            background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.3s;
-            font-weight: bold;
-            white-space: nowrap;
-        }
-        
-        .quick-test-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(255, 152, 0, 0.3);
-        }
-        
-        /* RESPONSYWNOŚĆ */
-        @media (max-width: 768px) {
-            .mic-test-content {
-                margin: 10px;
-            }
-            
-            .mic-test-body {
-                padding: 20px;
-                max-height: 70vh;
-            }
-            
-            .mic-test-header {
-                padding: 20px;
-                flex-direction: column;
-                text-align: center;
-                gap: 15px;
-            }
-            
-            .mic-test-footer {
-                flex-direction: column;
-                gap: 15px;
-                text-align: center;
-            }
-            
-            .mic-test-controls {
-                flex-direction: column;
-            }
-            
-            .test-btn {
-                width: 100%;
-                justify-content: center;
-                margin-right: 0;
-                margin-bottom: 10px;
-            }
-            
-            .volume-bars {
-                gap: 4px;
-            }
-            
-            .volume-bar {
-                width: 12px;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            .mic-test-body {
-                padding: 15px;
-            }
-            
-            .test-section {
-                padding: 20px;
-            }
-            
-            .volume-bars {
-                gap: 2px;
-            }
-            
-            .volume-bar {
-                width: 8px;
-            }
-        }
-    </style>
 </body>
 </html>
