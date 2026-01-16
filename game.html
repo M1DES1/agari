@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Agario Multiplayer - Rozgrywka</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
     <div class="game-container">
@@ -30,34 +31,62 @@
                 </div>
             </div>
             
-            <button id="menuBtn" class="menu-btn">⟲ Menu</button>
+            <div class="chat-toggle" id="chatToggle" title="Otwórz/zamknij czat">
+                <i class="fas fa-comments"></i>
+                <span class="unread-badge" id="unreadBadge">0</span>
+            </div>
+            
+            <button id="menuBtn" class="menu-btn">
+                <i class="fas fa-home"></i> Menu
+            </button>
+        </div>
+        
+        <!-- Panel czatu -->
+        <div class="chat-panel" id="chatPanel">
+            <div class="chat-header">
+                <h3><i class="fas fa-comments"></i> Czat</h3>
+                <button class="chat-close" id="chatClose">&times;</button>
+            </div>
+            
+            <div class="chat-messages" id="chatMessages">
+                <div class="system-message">
+                    <i class="fas fa-info-circle"></i> Witaj na czacie! Pisz do innych graczy
+                </div>
+            </div>
+            
+            <div class="quick-emojis">
+                <button class="emoji-btn" data-emoji="👋">👋</button>
+                <button class="emoji-btn" data-emoji="😄">😄</button>
+                <button class="emoji-btn" data-emoji="🎮">🎮</button>
+                <button class="emoji-btn" data-emoji="💀">💀</button>
+                <button class="emoji-btn" data-emoji="🍽️">🍽️</button>
+                <button class="emoji-btn" data-emoji="🏆">🏆</button>
+            </div>
+            
+            <div class="chat-input-container">
+                <input type="text" 
+                       id="chatInput" 
+                       placeholder="Napisz wiadomość..." 
+                       maxlength="200"
+                       autocomplete="off">
+                <button id="chatSend" class="chat-send-btn">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+            
+            <div class="chat-info">
+                <small>Enter - wyślij, ESC - zamknij czat</small>
+            </div>
         </div>
         
         <div class="controls-hint">
-            🎮 Użyj WASD lub strzałek do poruszania
+            <i class="fas fa-keyboard"></i> WASD/Strzałki - ruch | 
+            <i class="fas fa-comment"></i> T - otwórz czat |
+            <i class="fas fa-arrows-alt"></i> Scroll - powiększ
         </div>
     </div>
     
     <script src="game.js"></script>
-    <script>
-        // Przycisk powrotu do menu
-        document.getElementById('menuBtn').addEventListener('click', () => {
-            if (confirm('Czy na pewno chcesz wrócić do menu? Stracisz obecną grę.')) {
-                window.location.href = 'index.html';
-            }
-        });
-        
-        // Pobierz dane gracza z localStorage
-        const playerData = JSON.parse(localStorage.getItem('playerData') || '{}');
-        
-        // Jeśli nie ma danych, wróć do menu
-        if (!playerData.nickname) {
-            window.location.href = 'index.html';
-        } else {
-            // Ustaw informacje gracza w HUD
-            document.getElementById('playerName').textContent = playerData.nickname;
-            document.getElementById('playerCircle').style.background = playerData.color;
-        }
-    </script>
+    <!-- USUŃ TĘ SEKCIĘ SKRYPTU - PRZENIEŚ DO game.js -->
 </body>
 </html>
