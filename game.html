@@ -33,6 +33,11 @@
                     <span class="stat-label">Ranking:</span>
                     <span class="stat-value" id="playerRank">1</span>
                 </div>
+                <!-- DODANY ELEMENT COOLDOWN -->
+                <div class="stat">
+                    <span class="stat-label">Strzał:</span>
+                    <span class="stat-value" id="splitCooldown">Gotowy</span>
+                </div>
             </div>
             
             <div class="voice-controls">
@@ -72,6 +77,8 @@
                 <button class="emoji-btn" data-emoji="💀">💀</button>
                 <button class="emoji-btn" data-emoji="🍽️">🍽️</button>
                 <button class="emoji-btn" data-emoji="🏆">🏆</button>
+                <button class="emoji-btn" data-emoji="💥">💥</button>
+                <button class="emoji-btn" data-emoji="🎯">🎯</button>
             </div>
             
             <div class="chat-input-container">
@@ -108,8 +115,12 @@
                     <span>Przytrzymaj do mówienia</span>
                 </div>
                 <div class="instruction">
-                    <span class="key">Klik</span>
-                    <span>Przełącz voice chat</span>
+                    <span class="key">SHIFT</span>
+                    <span>Strzelanie kulki</span>
+                </div>
+                <div class="instruction">
+                    <span class="key">T</span>
+                    <span>Otwórz czat</span>
                 </div>
             </div>
         </div>
@@ -118,7 +129,15 @@
             <i class="fas fa-keyboard"></i> WASD - ruch | 
             <i class="fas fa-microphone"></i> V - mów | 
             <i class="fas fa-comment"></i> T - czat |
-            <i class="fas fa-arrows-alt"></i> Scroll - zoom
+            <i class="fas fa-arrows-alt"></i> Scroll - zoom |
+            <i class="fas fa-crosshairs"></i> SHIFT - strzał
+        </div>
+        
+        <!-- MINIMAPA -->
+        <div class="minimap-container">
+            <div class="minimap">
+                <canvas id="minimap" width="200" height="200"></canvas>
+            </div>
         </div>
     </div>
     
@@ -382,6 +401,33 @@
         
         .permission-modal {
             animation: slideInUp 0.5s ease-out;
+        }
+        
+        .minimap-container {
+            position: absolute;
+            top: 90px;
+            left: 20px;
+            z-index: 99;
+        }
+        
+        .minimap {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 10px;
+            padding: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            border: 2px solid #333;
+        }
+        
+        .minimap-header {
+            font-size: 0.9rem;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #333;
+            text-align: center;
+        }
+        
+        #minimap {
+            border-radius: 5px;
         }
     `;
     document.head.appendChild(style);
