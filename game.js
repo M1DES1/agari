@@ -11,13 +11,29 @@ window.addEventListener("resize", () => {
 
 const playerData = JSON.parse(localStorage.getItem('playerData') || '{}');
 const playerColor = playerData.color || '#FF5252';
+const playerImageUrl = playerData.imageUrl || null;
+let playerImage = null;
+
+if (playerImageUrl) {
+    playerImage = new Image();
+    playerImage.src = playerImageUrl;
+    playerImage.onload = () => {
+        console.log("✅ Grafika gracza załadowana");
+    };
+    playerImage.onerror = () => {
+        console.error("❌ Błąd ładowania grafiki gracza");
+        playerImage = null;
+    };
+}
 
 const ws = new WebSocket("wss://agari-qfuc.onrender.com");
 
 let myId = null;
 let players = [];
+let foods = []; // Jedzenie
+let viruses = []; // Uciekające kulki
+let bullets = []; // Wystrzelone kulki
 const keys = {};
-let mapSize = 5000;
 let chatOpen = false;
 let unreadMessages = 0;
 let zoom = 1;
@@ -26,6 +42,13 @@ let cameraX = 0;
 let cameraY = 0;
 let targetCameraX = 0;
 let targetCameraY = 0;
+let mouseX = 0;
+let mouseY = 0;
+let mouseWorldX = 0;
+let mouseWorldY = 0;
+let isShifting = false;
+let splitCooldown = 0;
+let splitCooldownInterval = null;
 
 let isVoiceActive = false;
 let voiceStream = null;
@@ -133,6 +156,49 @@ function initDOM() {
             }
         }
     }, 1500);
+    
+    // Aktualizuj pozycję myszy
+    canvas.addEventListener('mousemove', (e) => {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+        
+        // Konwertuj na pozycję w świecie gry
+        mouseWorldX = (mouseX - cameraX) / zoom;
+        mouseWorldY = (mouseY - cameraY) / zoom;
+    });
+    
+    // Obsługa kliknięcia SHIFT
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Shift') {
+            isShifting = true;
+        }
+        
+        // Obsługa strzału kulki (SHIFT + SPACJA)
+        if (e.key === ' ' && isShifting) {
+            shootBullet();
+        }
+    });
+    
+    window.addEventListener('keyup', (e) => {
+        if (e.key === 'Shift') {
+            isShifting = false;
+        }
+    });
+    
+    // Obsługa kliknięcia myszą do strzału
+    canvas.addEventListener('click', (e) => {
+        if (isShifting) {
+            shootBullet();
+        }
+    });
+    
+    // Cooldown dla podziału
+    splitCooldownInterval = setInterval(() => {
+        if (splitCooldown > 0) {
+            splitCooldown--;
+            updateCooldownDisplay();
+        }
+    }, 1000);
 }
 
 async function initVoiceChat() {
@@ -230,7 +296,7 @@ async function initVoiceChat() {
             addChatMessage({
                 type: 'chat',
                 sender: 'SYSTEM',
-                message: '❌ Nie znaleziono mikrofonu. Podłącz mikrofon i spróbuj ponownie.',
+                message: '❌ Nie znaleziono mikrofonu. Podłącz mikrofon i spróbuj ponów.',
                 color: '#F44336',
                 timestamp: Date.now()
             });
@@ -252,6 +318,57 @@ async function initVoiceChat() {
                 await initVoiceChat();
             };
         }
+    }
+}
+
+function shootBullet() {
+    const me = players.find(p => p.id === myId);
+    if (!me || me.r < 40) {
+        addChatMessage({
+            type: 'chat',
+            sender: 'SYSTEM',
+            message: '❌ Musisz mieć co najmniej 40 rozmiaru aby strzelać!',
+            color: '#F44336',
+            timestamp: Date.now()
+        });
+        return;
+    }
+    
+    if (splitCooldown > 0) {
+        addChatMessage({
+            type: 'chat',
+            sender: 'SYSTEM',
+            message: `⏳ Poczekaj ${splitCooldown}s przed kolejnym strzałem`,
+            color: '#FF9800',
+            timestamp: Date.now()
+        });
+        return;
+    }
+    
+    if (ws.readyState === WebSocket.OPEN && myId) {
+        ws.send(JSON.stringify({
+            type: 'shoot',
+            mouseX: mouseWorldX,
+            mouseY: mouseWorldY,
+            playerX: me.x,
+            playerY: me.y
+        }));
+        
+        splitCooldown = 10; // 10 sekund cooldown
+        updateCooldownDisplay();
+    }
+}
+
+function updateCooldownDisplay() {
+    const cooldownElement = document.getElementById('splitCooldown');
+    if (!cooldownElement) return;
+    
+    if (splitCooldown > 0) {
+        cooldownElement.textContent = `Cooldown: ${splitCooldown}s`;
+        cooldownElement.style.color = '#FF9800';
+    } else {
+        cooldownElement.textContent = 'Gotowy do strzału';
+        cooldownElement.style.color = '#4CAF50';
     }
 }
 
@@ -470,7 +587,6 @@ function playVoiceAudio(fromPlayerId, audioData, volume = 1.0) {
     try {
         console.log(`🔊 Odtwarzanie audio od ${fromPlayerId}, głośność: ${volume}`);
         
-        // SPRAWDŹ UPRAWNIENIE DŹWIĘKU
         const audioPermission = localStorage.getItem('audioPermission');
         if (audioPermission === 'skipped') {
             console.log('🔇 Pomijanie audio - użytkownik nie zezwolił na dźwięk');
@@ -960,7 +1076,9 @@ ws.onopen = () => {
     
     ws.send(JSON.stringify({
         type: "join",
-        nickname: playerData.nickname || "Player"
+        nickname: playerData.nickname || "Player",
+        color: playerColor,
+        imageUrl: playerImageUrl
     }));
     
     addChatMessage({
@@ -986,6 +1104,7 @@ ws.onerror = (e) => {
 ws.onclose = () => {
     console.warn("⚠️ WebSocket zamknięty");
     stopVoiceChat();
+    if (splitCooldownInterval) clearInterval(splitCooldownInterval);
     addChatMessage({
         type: 'chat',
         sender: 'SYSTEM',
@@ -1006,15 +1125,34 @@ ws.onmessage = (e) => {
                 myId = data.id;
                 mapSize = data.mapSize || 5000;
                 voiceRange = data.voiceRange || 200;
+                foods = data.foods || [];
+                viruses = data.viruses || [];
+                
                 const voiceRangeInfo = document.getElementById('voiceRangeInfo');
                 if (voiceRangeInfo) {
                     voiceRangeInfo.textContent = `${voiceRange/10}m`;
                 }
+                
+                // Dodaj element cooldown do HUD
+                const gameStats = document.querySelector('.game-stats');
+                if (gameStats && !document.getElementById('splitCooldown')) {
+                    const cooldownStat = document.createElement('div');
+                    cooldownStat.className = 'stat';
+                    cooldownStat.innerHTML = `
+                        <span class="stat-label">Strzał:</span>
+                        <span class="stat-value" id="splitCooldown">Gotowy</span>
+                    `;
+                    gameStats.appendChild(cooldownStat);
+                }
+                
                 console.log(`🎮 Gracz zainicjalizowany: ${myId}, zasięg voice: ${voiceRange}`);
                 break;
                 
-            case "state":
-                players = data.players;
+            case "gameState":
+                players = data.players || [];
+                foods = data.foods || [];
+                viruses = data.viruses || [];
+                bullets = data.bullets || [];
                 updateHUD();
                 break;
                 
@@ -1030,6 +1168,66 @@ ws.onmessage = (e) => {
                     stopVoiceChat();
                     setTimeout(() => window.location.href = 'index.html', 2000);
                 }
+                break;
+                
+            case "eatFood":
+                addChatMessage({
+                    type: 'chat',
+                    sender: 'SYSTEM',
+                    message: `🍎 Zjadłeś jedzenie (+${data.mass} masy)`,
+                    color: '#4CAF50',
+                    timestamp: Date.now()
+                });
+                break;
+                
+            case "eatVirus":
+                addChatMessage({
+                    type: 'chat',
+                    sender: 'SYSTEM',
+                    message: `💚 Zjadłeś wirusa! (+${data.mass} masy)`,
+                    color: '#00FF00',
+                    timestamp: Date.now()
+                });
+                break;
+                
+            case "eatPlayer":
+                addChatMessage({
+                    type: 'chat',
+                    sender: 'SYSTEM',
+                    message: `🍽️ Zjadłeś gracza! (+${data.mass} masy)`,
+                    color: '#FF9800',
+                    timestamp: Date.now()
+                });
+                break;
+                
+            case "bulletFired":
+                addChatMessage({
+                    type: 'chat',
+                    sender: 'SYSTEM',
+                    message: `💥 Wystrzeliłeś kulkę (-${data.mass} masy)`,
+                    color: '#2196F3',
+                    timestamp: Date.now()
+                });
+                break;
+                
+            case "bulletReturn":
+                addChatMessage({
+                    type: 'chat',
+                    sender: 'SYSTEM',
+                    message: `🎯 Kulka wróciła! (+${data.mass} masy)`,
+                    color: '#9C27B0',
+                    timestamp: Date.now()
+                });
+                break;
+                
+            case "cooldown":
+                addChatMessage({
+                    type: 'chat',
+                    sender: 'SYSTEM',
+                    message: `⏳ Poczekaj ${data.remaining}s przed kolejnym strzałem`,
+                    color: '#FF9800',
+                    timestamp: Date.now()
+                });
                 break;
                 
             case "chat":
@@ -1125,6 +1323,110 @@ function draw() {
     
     drawGrid();
     
+    // Rysuj jedzenie
+    foods.forEach(food => {
+        const x = food.x;
+        const y = food.y;
+        const r = food.r || 5;
+        
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        
+        if (food.type === 'virus') {
+            ctx.fillStyle = '#00FF00';
+        } else {
+            ctx.fillStyle = food.color || '#FF5252';
+        }
+        ctx.fill();
+        
+        if (food.type === 'virus') {
+            ctx.strokeStyle = '#00AA00';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+    });
+    
+    // Rysuj wirusy/uciekające kulki
+    viruses.forEach(virus => {
+        const x = virus.x;
+        const y = virus.y;
+        const r = virus.r || 30;
+        
+        // Świecąca animacja
+        const pulse = (Math.sin(Date.now() / 200) + 1) * 0.3;
+        
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        
+        // Gradient dla świecącego efektu
+        const gradient = ctx.createRadialGradient(x, y, 0, x, y, r);
+        gradient.addColorStop(0, 'rgba(0, 255, 0, 0.8)');
+        gradient.addColorStop(0.7, 'rgba(0, 200, 0, 0.5)');
+        gradient.addColorStop(1, 'rgba(0, 150, 0, 0.2)');
+        
+        ctx.fillStyle = gradient;
+        ctx.fill();
+        
+        // Pulsujący obrys
+        ctx.strokeStyle = `rgba(0, 255, 0, ${0.7 + pulse * 0.3})`;
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        
+        // Ikona uciekającej kulki
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 20px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🏃', x, y);
+    });
+    
+    // Rysuj pociski
+    bullets.forEach(bullet => {
+        const x = bullet.x;
+        const y = bullet.y;
+        const r = bullet.r || 10;
+        
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        
+        // Gradient dla pocisku
+        const gradient = ctx.createRadialGradient(x, y, 0, x, y, r);
+        gradient.addColorStop(0, 'rgba(33, 150, 243, 1)');
+        gradient.addColorStop(0.7, 'rgba(21, 101, 192, 0.8)');
+        gradient.addColorStop(1, 'rgba(13, 71, 161, 0.6)');
+        
+        ctx.fillStyle = gradient;
+        ctx.fill();
+        
+        // Obrys
+        ctx.strokeStyle = '#1976D2';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        // Strzałka kierunku
+        if (bullet.ownerId === myId) {
+            const owner = players.find(p => p.id === bullet.ownerId);
+            if (owner) {
+                const angle = Math.atan2(owner.y - y, owner.x - x);
+                
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate(angle);
+                
+                ctx.beginPath();
+                ctx.moveTo(r, 0);
+                ctx.lineTo(-r/2, -r/2);
+                ctx.lineTo(-r/2, r/2);
+                ctx.closePath();
+                
+                ctx.fillStyle = '#4CAF50';
+                ctx.fill();
+                
+                ctx.restore();
+            }
+        }
+    });
+    
     players.forEach(p => {
         const x = p.x;
         const y = p.y;
@@ -1138,16 +1440,39 @@ function draw() {
             return;
         }
         
-        ctx.beginPath();
-        ctx.arc(x, y, p.r, 0, Math.PI * 2);
+        // Rysuj gracza
+        if (p.id === myId && playerImage && playerImage.complete) {
+            // Rysuj gracza z własną grafiką
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(x, y, p.r, 0, Math.PI * 2);
+            ctx.clip();
+            
+            const imgSize = p.r * 2;
+            ctx.drawImage(playerImage, x - p.r, y - p.r, imgSize, imgSize);
+            
+            ctx.restore();
+            
+            // Obrys
+            ctx.beginPath();
+            ctx.arc(x, y, p.r, 0, Math.PI * 2);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+        } else {
+            // Rysuj zwykłą kulkę
+            ctx.beginPath();
+            ctx.arc(x, y, p.r, 0, Math.PI * 2);
+            
+            ctx.fillStyle = p.color || (p.id === myId ? playerColor : '#2196F3');
+            ctx.fill();
+            
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#000';
+            ctx.stroke();
+        }
         
-        ctx.fillStyle = p.color || (p.id === myId ? playerColor : '#2196F3');
-        ctx.fill();
-        
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = '#000';
-        ctx.stroke();
-        
+        // Rysuj nick
         ctx.fillStyle = '#000';
         ctx.font = `${Math.max(12, p.r / 2)}px Arial`;
         ctx.textAlign = "center";
@@ -1162,6 +1487,7 @@ function draw() {
             ctx.fillText(`${Math.round(p.r)}`, x, y + p.r / 2 + 10);
         }
         
+        // Wskaźnik voice chatu
         if (p.isSpeaking) {
             const pulse = (Math.sin(Date.now() / 200) + 1) * 0.3;
             ctx.beginPath();
@@ -1175,6 +1501,48 @@ function draw() {
             ctx.fillText('🎤', x, y - p.r - 15);
         }
     });
+    
+    // Rysuj celownik jeśli SHIFT jest wciśnięty
+    if (isShifting) {
+        const me = players.find(p => p.id === myId);
+        if (me && me.r >= 40) {
+            // Linia od gracza do kursora
+            ctx.beginPath();
+            ctx.moveTo(me.x, me.y);
+            ctx.lineTo(mouseWorldX, mouseWorldY);
+            ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Celownik
+            ctx.beginPath();
+            ctx.arc(mouseWorldX, mouseWorldY, 10, 0, Math.PI * 2);
+            ctx.strokeStyle = 'red';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            // Krzyżyk
+            ctx.beginPath();
+            ctx.moveTo(mouseWorldX - 15, mouseWorldY);
+            ctx.lineTo(mouseWorldX + 15, mouseWorldY);
+            ctx.moveTo(mouseWorldX, mouseWorldY - 15);
+            ctx.lineTo(mouseWorldX, mouseWorldY + 15);
+            ctx.stroke();
+            
+            // Tekst informacyjny
+            ctx.fillStyle = 'red';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('STRZAŁ', mouseWorldX, mouseWorldY - 25);
+            
+            if (splitCooldown > 0) {
+                ctx.fillStyle = '#FF9800';
+                ctx.fillText(`Cooldown: ${splitCooldown}s`, mouseWorldX, mouseWorldY + 35);
+            }
+        }
+    }
     
     ctx.restore();
     
@@ -1213,7 +1581,7 @@ function drawGrid() {
 function drawMinimap(me) {
     const minimapSize = 200;
     const margin = 30;
-    const scale = minimapSize / mapSize;
+    const scale = minimapSize / 5000; // mapSize
     
     ctx.save();
     
@@ -1234,6 +1602,35 @@ function drawMinimap(me) {
     ctx.lineWidth = 4;
     ctx.strokeRect(canvas.width - minimapSize - margin, margin, minimapSize, minimapSize);
     
+    // Tło minimapy
+    ctx.fillStyle = '#f0f8ff';
+    ctx.fillRect(canvas.width - minimapSize - margin, margin, minimapSize, minimapSize);
+    
+    // Rysuj jedzenie na minimapie
+    foods.forEach(food => {
+        const x = canvas.width - minimapSize - margin + food.x * scale;
+        const y = margin + food.y * scale;
+        const r = Math.max(1, food.r * scale * 0.3);
+        
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = food.type === 'virus' ? '#00FF00' : '#FF5252';
+        ctx.fill();
+    });
+    
+    // Rysuj wirusy na minimapie
+    viruses.forEach(virus => {
+        const x = canvas.width - minimapSize - margin + virus.x * scale;
+        const y = margin + virus.y * scale;
+        const r = Math.max(2, virus.r * scale * 0.3);
+        
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = '#00FF00';
+        ctx.fill();
+    });
+    
+    // Rysuj zasięg voice chatu
     ctx.fillStyle = 'rgba(33, 150, 243, 0.1)';
     ctx.beginPath();
     ctx.arc(
@@ -1245,10 +1642,11 @@ function drawMinimap(me) {
     );
     ctx.fill();
     
+    // Rysuj graczy na minimapie
     players.forEach(p => {
         const x = canvas.width - minimapSize - margin + p.x * scale;
         const y = margin + p.y * scale;
-        const r = Math.max(4, p.r * scale * 0.3);
+        const r = Math.max(3, p.r * scale * 0.3);
         
         ctx.beginPath();
         ctx.arc(x, y, r, 0, Math.PI * 2);
@@ -1257,30 +1655,53 @@ function drawMinimap(me) {
         
         if (p.id === myId) {
             ctx.strokeStyle = '#FF0000';
-            ctx.lineWidth = 3;
+            ctx.lineWidth = 2;
             ctx.stroke();
         }
         
         if (p.isSpeaking) {
             ctx.fillStyle = '#FF9800';
-            ctx.font = 'bold 12px Arial';
+            ctx.font = 'bold 10px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText('🎤', x, y - r - 5);
+            ctx.fillText('🎤', x, y - r - 3);
         }
     });
     
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
-    ctx.fillRect(canvas.width - minimapSize - margin, margin + minimapSize + 5, minimapSize, 30);
+    // Rysuj pociski na minimapie
+    bullets.forEach(bullet => {
+        const x = canvas.width - minimapSize - margin + bullet.x * scale;
+        const y = margin + bullet.y * scale;
+        const r = Math.max(1, bullet.r * scale * 0.3);
+        
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = '#2196F3';
+        ctx.fill();
+    });
     
+    // Tło informacji
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+    ctx.fillRect(canvas.width - minimapSize - margin, margin + minimapSize + 5, minimapSize, 40);
+    
+    // Informacje
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 14px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(
-        `ZOOM: ${zoom.toFixed(1)}x | VOICE: ${voiceConnections.size}`, 
-        canvas.width - minimapSize - margin + minimapSize/2, 
-        margin + minimapSize + 20
-    );
+    
+    const infoLines = [
+        `ZOOM: ${zoom.toFixed(1)}x`,
+        `VOICE: ${voiceConnections.size}`,
+        `STRZAŁ: ${splitCooldown > 0 ? `${splitCooldown}s` : 'GOTOWY'}`
+    ];
+    
+    infoLines.forEach((line, index) => {
+        ctx.fillText(
+            line, 
+            canvas.width - minimapSize - margin + minimapSize/2, 
+            margin + minimapSize + 15 + (index * 12)
+        );
+    });
     
     ctx.restore();
 }
@@ -1301,18 +1722,27 @@ function drawVoiceRange(me) {
     
     ctx.restore();
     
+    // Panel informacyjny voice chatu
     ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-    ctx.fillRect(25, canvas.height - 60, 180, 40);
+    ctx.fillRect(25, canvas.height - 100, 220, 80);
     
     ctx.fillStyle = isUsingHeadphones ? '#4CAF50' : '#FF9800';
     ctx.font = 'bold 16px Arial';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`VOICE CHAT: ${voiceConnections.size}`, 35, canvas.height - 40);
+    ctx.fillText(`VOICE CHAT: ${voiceConnections.size}`, 35, canvas.height - 75);
     
     ctx.fillStyle = '#fff';
     ctx.font = '14px Arial';
-    ctx.fillText(isUsingHeadphones ? '🎧 SLUCHAWKI' : '🔊 GLOSNIKI', 35, canvas.height - 20);
+    ctx.fillText(isUsingHeadphones ? '🎧 SLUCHAWKI' : '🔊 GLOSNIKI', 35, canvas.height - 55);
+    
+    // Informacja o strzelaniu
+    const mePlayer = players.find(p => p.id === myId);
+    if (mePlayer && mePlayer.r >= 40) {
+        ctx.fillStyle = splitCooldown > 0 ? '#FF9800' : '#4CAF50';
+        ctx.font = '14px Arial';
+        ctx.fillText(`STRZAŁ: ${splitCooldown > 0 ? `Cooldown ${splitCooldown}s` : 'SHIFT + KLIK'}`, 35, canvas.height - 35);
+    }
 }
 
 function updateHUD() {
@@ -1338,17 +1768,10 @@ function updateHUD() {
     if (voiceCountElement) {
         voiceCountElement.textContent = voiceConnections.size;
     }
-}
-
-canvas.addEventListener('wheel', (e) => {
-    e.preventDefault();
     
-    if (e.deltaY < 0) {
-        zoom = Math.min(3, zoom + 0.1);
-    } else {
-        zoom = Math.max(0.5, zoom - 0.1);
-    }
-});
+    // Aktualizuj cooldown
+    updateCooldownDisplay();
+}
 
 function gameLoop() {
     update();
@@ -1367,6 +1790,8 @@ window.addEventListener('beforeunload', () => {
     if (voiceStream) {
         voiceStream.getTracks().forEach(track => track.stop());
     }
+    
+    if (splitCooldownInterval) clearInterval(splitCooldownInterval);
     
     audioElements.forEach(audio => {
         if (audio.src && audio.src.startsWith('blob:')) {
@@ -1449,6 +1874,19 @@ style.textContent = `
     @keyframes pulse {
         0%, 100% { transform: scale(1); opacity: 1; }
         50% { transform: scale(1.1); opacity: 0.8; }
+    }
+    
+    @keyframes glow {
+        0%, 100% { 
+            filter: drop-shadow(0 0 5px #00FF00);
+        }
+        50% { 
+            filter: drop-shadow(0 0 15px #00FF00);
+        }
+    }
+    
+    .virus-glow {
+        animation: glow 2s infinite;
     }
     
     .headphone-icon {
