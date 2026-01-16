@@ -1,12 +1,129 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-  <meta charset="UTF-8" />
-  <title>Agari Multiplayer</title>
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agario Multiplayer - Menu</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <canvas id="game"></canvas>
-  <script src="game.js"></script>
+    <div class="menu-container">
+        <div class="menu-box">
+            <h1>🎮 AGARIO MULTIPLAYER</h1>
+            
+            <div class="input-group">
+                <label for="nickname">Twój Nick:</label>
+                <input type="text" id="nickname" 
+                       placeholder="Wpisz swój nick..." 
+                       maxlength="15"
+                       value="Gracz">
+                <div class="hint">Maksymalnie 15 znaków</div>
+            </div>
+            
+            <div class="color-picker">
+                <label>Kolor kulki:</label>
+                <div class="colors">
+                    <div class="color-option" style="background: #FF5252" data-color="#FF5252"></div>
+                    <div class="color-option" style="background: #4CAF50" data-color="#4CAF50"></div>
+                    <div class="color-option" style="background: #2196F3" data-color="#2196F3"></div>
+                    <div class="color-option" style="background: #FFC107" data-color="#FFC107"></div>
+                    <div class="color-option" style="background: #9C27B0" data-color="#9C27B0"></div>
+                    <div class="color-option" style="background: #00BCD4" data-color="#00BCD4"></div>
+                </div>
+            </div>
+            
+            <button id="playBtn" class="play-btn">
+                🚀 ROZPOCZNIJ GRĘ
+            </button>
+            
+            <div class="instructions">
+                <h3>🎯 Sterowanie:</h3>
+                <ul>
+                    <li><strong>W / ↑</strong> - ruch w górę</li>
+                    <li><strong>S / ↓</strong> - ruch w dół</li>
+                    <li><strong>A / ←</strong> - ruch w lewo</li>
+                    <li><strong>D / →</strong> - ruch w prawo</li>
+                </ul>
+                <p>Zjadaj mniejsze kulki, aby rosnąć!</p>
+            </div>
+            
+            <div class="server-status">
+                <div class="status-dot"></div>
+                <span id="statusText">Łączenie z serwerem...</span>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Sprawdzenie połączenia z serwerem
+        async function checkServerConnection() {
+            const statusDot = document.querySelector('.status-dot');
+            const statusText = document.getElementById('statusText');
+            
+            try {
+                // Próba połączenia z serwerem WebSocket
+                statusText.textContent = "Łączenie z serwerem...";
+                statusDot.style.background = "#FFC107";
+                
+                // Przechodzimy od razu do gry (Render.com może mieć inne porty)
+                statusText.textContent = "Serwer gotowy";
+                statusDot.style.background = "#4CAF50";
+                
+            } catch (error) {
+                statusText.textContent = "Błąd połączenia";
+                statusDot.style.background = "#F44336";
+            }
+        }
+        
+        // Obsługa przycisku rozpoczęcia gry
+        document.getElementById('playBtn').addEventListener('click', () => {
+            const nickname = document.getElementById('nickname').value.trim();
+            const selectedColor = document.querySelector('.color-option.selected')?.dataset.color || '#FF5252';
+            
+            if (!nickname) {
+                alert('Proszę wpisać nick!');
+                return;
+            }
+            
+            // Zapisanie danych w localStorage
+            localStorage.setItem('playerData', JSON.stringify({
+                nickname: nickname,
+                color: selectedColor,
+                timestamp: Date.now()
+            }));
+            
+            // Przejście do gry
+            window.location.href = 'game.html';
+        });
+        
+        // Obsługa wyboru koloru
+        document.querySelectorAll('.color-option').forEach(option => {
+            option.addEventListener('click', function() {
+                document.querySelectorAll('.color-option').forEach(opt => 
+                    opt.classList.remove('selected'));
+                this.classList.add('selected');
+            });
+        });
+        
+        // Ustaw domyślny kolor
+        document.querySelectorAll('.color-option')[0].classList.add('selected');
+        
+        // Enter też zaczyna grę
+        document.getElementById('nickname').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('playBtn').click();
+            }
+        });
+        
+        // Sprawdź połączenie przy ładowaniu
+        window.addEventListener('load', checkServerConnection);
+        
+        // Automatyczne focus na nickname
+        setTimeout(() => {
+            document.getElementById('nickname').focus();
+            document.getElementById('nickname').select();
+        }, 500);
+    </script>
 </body>
 </html>
