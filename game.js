@@ -4,8 +4,13 @@ const ctx = canvas.getContext("2d");
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-// 🔴 ZMIEŃ NA SWÓJ ADRES Z RENDERA
-const ws = new WebSocket("wss://TWOJA-NAZWA.onrender.com");
+window.addEventListener("resize", () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+});
+
+// 🔥 TWÓJ SERWER RENDER
+const ws = new WebSocket("wss://agari-qfuc.onrender.com");
 
 let myId = null;
 let players = [];
@@ -21,6 +26,8 @@ window.addEventListener("keydown", e => keys[e.key] = true);
 window.addEventListener("keyup", e => keys[e.key] = false);
 
 function update() {
+  if (!myId) return;
+
   let dx = 0, dy = 0;
   if (keys["w"]) dy -= 5;
   if (keys["s"]) dy += 5;
