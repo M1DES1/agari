@@ -4,13 +4,13 @@ const wss = new WebSocket.Server({ port: PORT });
 
 const players = {};
 const chatHistory = [];
-const voiceSessions = new Map(); // Map<playerId, {targets: Set<playerId>}>
+const voiceSessions = new Map();
 const MAX_CHAT_HISTORY = 100;
 const MAP_SIZE = 5000;
 const MAX_RADIUS = 100;
 const INITIAL_RADIUS = 20;
 const SPEED_FACTOR = 3;
-const VOICE_RANGE = 200; // 20 metrów w skali gry (1 jednostka = 0.1m)
+const VOICE_RANGE = 200;
 
 function randomPos() {
     return Math.random() * MAP_SIZE;
@@ -20,26 +20,22 @@ function getSpeed(radius) {
     return Math.max(1, SPEED_FACTOR * (INITIAL_RADIUS / radius));
 }
 
-// Funkcja obliczająca odległość między graczami
 function getDistance(player1, player2) {
     const dx = player1.x - player2.x;
     const dy = player1.y - player2.y;
     return Math.sqrt(dx * dx + dy * dy);
 }
 
-// Aktualizuj połączenia voice chatu na podstawie odległości
 function updateVoiceConnections(playerId) {
     const player = players[playerId];
     if (!player) return;
     
-    // Znajdź graczy w zasięgu voice chatu
     const nearbyPlayers = Object.values(players).filter(p => {
         if (p.id === playerId) return false;
         const distance = getDistance(player, p);
         return distance <= VOICE_RANGE;
     });
     
-    // Pobierz lub stwórz sesję voice chatu
     if (!voiceSessions.has(playerId)) {
         voiceSessions.set(playerId, { targets: new Set() });
     }
@@ -48,10 +44,8 @@ function updateVoiceConnections(playerId) {
     const oldTargets = new Set(session.targets);
     const newTargets = new Set(nearbyPlayers.map(p => p.id));
     
-    // Dodaj nowych graczy do voice chatu
     newTargets.forEach(targetId => {
         if (!oldTargets.has(targetId)) {
-            // Powiadom gracza o nowym połączeniu voice
             sendToPlayer(playerId, {
                 type: 'voiceConnect',
                 playerId: targetId,
@@ -59,7 +53,6 @@ function updateVoiceConnections(playerId) {
                 distance: getDistance(player, players[targetId])
             });
             
-            // Upewnij się, że target też ma sesję
             if (!voiceSessions.has(targetId)) {
                 voiceSessions.set(targetId, { targets: new Set() });
             }
@@ -69,16 +62,13 @@ function updateVoiceConnections(playerId) {
         }
     });
     
-    // Usuń graczy poza zasięgiem
     oldTargets.forEach(targetId => {
         if (!newTargets.has(targetId)) {
-            // Powiadom gracza o rozłączeniu voice
             sendToPlayer(playerId, {
                 type: 'voiceDisconnect',
                 playerId: targetId
             });
             
-            // Usuń z sesji targeta
             if (voiceSessions.has(targetId)) {
                 voiceSessions.get(targetId).targets.delete(playerId);
             }
@@ -87,26 +77,23 @@ function updateVoiceConnections(playerId) {
         }
     });
     
-    // Jeśli nie ma targetów, usuń sesję
     if (session.targets.size === 0) {
         voiceSessions.delete(playerId);
     }
 }
 
-// Funkcja do wysyłania wiadomości do wszystkich graczy
 function broadcast(data, excludeId = null) {
     const message = JSON.stringify(data);
     wss.clients.forEach(client => {
         if (client.readyState === WebSocket.OPEN) {
             if (excludeId && players[excludeId]?.ws === client) {
-                return; // Pomijamy wyłączonego gracza
+                return;
             }
             client.send(message);
         }
     });
 }
 
-// Funkcja do wysyłania wiadomości do konkretnego gracza
 function sendToPlayer(playerId, data) {
     const player = players[playerId];
     if (player && player.ws && player.ws.readyState === WebSocket.OPEN) {
@@ -114,7 +101,6 @@ function sendToPlayer(playerId, data) {
     }
 }
 
-// Rozgłaszanie audio do graczy w zasięgu
 function broadcastAudio(fromPlayerId, audioData, sequence) {
     const player = players[fromPlayerId];
     if (!player) return;
@@ -122,12 +108,11 @@ function broadcastAudio(fromPlayerId, audioData, sequence) {
     const session = voiceSessions.get(fromPlayerId);
     if (!session) return;
     
-    // Wyślij audio do wszystkich graczy w zasięgu
     session.targets.forEach(targetId => {
         const target = players[targetId];
         if (target) {
             const distance = getDistance(player, target);
-            const volume = Math.max(0.1, 1 - (distance / VOICE_RANGE)); // Obniż głośność z odległością
+            const volume = Math.max(0.1, 1 - (distance / VOICE_RANGE));
             
             sendToPlayer(targetId, {
                 type: 'voiceAudio',
@@ -146,9 +131,6 @@ wss.on('connection', ws => {
     let playerId = null;
     let nickname = "Player";
     
-    // Zapisz referencję do WebSocket
-    ws.playerId = playerId;
-    
     ws.on('message', msg => {
         try {
             const data = JSON.parse(msg);
@@ -164,12 +146,11 @@ wss.on('connection', ws => {
                     y: randomPos(),
                     r: INITIAL_RADIUS,
                     color: '#' + Math.floor(Math.random()*16777215).toString(16),
-                    ws: ws // Zapisz referencję do połączenia
+                    ws: ws
                 };
                 
                 ws.playerId = playerId;
                 
-                // Wyślij powitalną wiadomość na czat
                 const welcomeMessage = {
                     type: 'chat',
                     sender: 'SYSTEM',
@@ -185,13 +166,11 @@ wss.on('connection', ws => {
                 
                 broadcast(welcomeMessage);
                 
-                // Wyślij historię czatu do nowego gracza
                 sendToPlayer(playerId, {
                     type: 'chatHistory',
                     messages: chatHistory.slice(-20)
                 });
                 
-                // Wyślij dane inicjalizacyjne
                 sendToPlayer(playerId, { 
                     type: 'init', 
                     id: playerId,
@@ -211,15 +190,12 @@ wss.on('connection', ws => {
                 player.x += data.dx * speed;
                 player.y += data.dy * speed;
                 
-                // Ograniczenie do mapy
                 player.x = Math.max(player.r, Math.min(MAP_SIZE - player.r, player.x));
                 player.y = Math.max(player.r, Math.min(MAP_SIZE - player.r, player.y));
                 
-                // Jeśli gracz się poruszył, zaktualizuj połączenia voice
                 if (oldX !== player.x || oldY !== player.y) {
                     updateVoiceConnections(playerId);
                     
-                    // Powiadom graczy o zmianie pozycji dla voice chatu
                     if (voiceSessions.has(playerId)) {
                         const session = voiceSessions.get(playerId);
                         session.targets.forEach(targetId => {
@@ -233,7 +209,6 @@ wss.on('connection', ws => {
                     }
                 }
                 
-                // Kolizje między graczami
                 Object.values(players).forEach(other => {
                     if (other.id !== playerId && other.id) {
                         const dx = player.x - other.x;
@@ -242,10 +217,8 @@ wss.on('connection', ws => {
                         
                         if (distance < player.r + other.r) {
                             if (player.r > other.r * 1.1) {
-                                // Zjedz mniejszą kulkę
                                 player.r = Math.min(MAX_RADIUS, player.r + other.r * 0.5);
                                 
-                                // Wiadomość o zjedzeniu
                                 const eatMessage = {
                                     type: 'chat',
                                     sender: 'SYSTEM',
@@ -261,7 +234,6 @@ wss.on('connection', ws => {
                                 
                                 broadcast(eatMessage);
                                 
-                                // Zamknij połączenia voice dla zjedzonego gracza
                                 if (voiceSessions.has(other.id)) {
                                     voiceSessions.get(other.id).targets.forEach(targetId => {
                                         sendToPlayer(targetId, {
@@ -330,14 +302,12 @@ wss.on('connection', ws => {
             }
             
             if (data.type === 'voiceAudio' && playerId && players[playerId]) {
-                // Przekaż audio do graczy w zasięgu
                 broadcastAudio(playerId, data.audio, data.sequence);
             }
             
             if (data.type === 'voiceStatus' && playerId && players[playerId]) {
                 const player = players[playerId];
                 
-                // Rozgłoś status voice chatu do graczy w zasięgu
                 if (voiceSessions.has(playerId)) {
                     const session = voiceSessions.get(playerId);
                     session.targets.forEach(targetId => {
@@ -345,7 +315,7 @@ wss.on('connection', ws => {
                             type: 'voiceStatusUpdate',
                             playerId: playerId,
                             nickname: player.nickname,
-                            status: data.status, // 'talking', 'silent'
+                            status: data.status,
                             timestamp: Date.now()
                         });
                     });
@@ -361,7 +331,6 @@ wss.on('connection', ws => {
         if (playerId && players[playerId]) {
             const playerName = players[playerId].nickname;
             
-            // Zamknij połączenia voice chatu
             if (voiceSessions.has(playerId)) {
                 voiceSessions.get(playerId).targets.forEach(targetId => {
                     sendToPlayer(targetId, {
@@ -372,7 +341,6 @@ wss.on('connection', ws => {
                 voiceSessions.delete(playerId);
             }
             
-            // Wiadomość pożegnalna
             const goodbyeMessage = {
                 type: 'chat',
                 sender: 'SYSTEM',
@@ -398,7 +366,6 @@ wss.on('connection', ws => {
     });
 });
 
-// Wysyłanie stanu gry do wszystkich graczy
 setInterval(() => {
     const snapshot = JSON.stringify({ 
         type: 'state', 
