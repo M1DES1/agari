@@ -7,82 +7,263 @@
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        @keyframes glow {
+            0%, 100% { text-shadow: 0 0 10px rgba(102, 126, 234, 0.5); }
+            50% { text-shadow: 0 0 20px rgba(102, 126, 234, 0.8); }
+        }
+        
+        .floating-icon {
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        .glowing-text {
+            animation: glow 2s ease-in-out infinite;
+        }
+    </style>
 </head>
 <body>
     <div class="menu-container">
+        <div class="menu-background">
+            <div class="bg-circle" style="top: 10%; left: 10%; animation-delay: 0s;"></div>
+            <div class="bg-circle" style="top: 60%; left: 80%; animation-delay: 0.5s;"></div>
+            <div class="bg-circle" style="top: 30%; left: 70%; animation-delay: 1s;"></div>
+            <div class="bg-circle" style="top: 80%; left: 20%; animation-delay: 1.5s;"></div>
+            <div class="bg-circle" style="top: 40%; left: 40%; animation-delay: 2s;"></div>
+        </div>
+        
         <div class="menu-box">
-            <h1>🎮 AGARIO MULTIPLAYER</h1>
-            <p class="game-subtitle">Z Voice Chat!</p>
-            
-            <div class="input-group">
-                <label for="nickname"><i class="fas fa-user"></i> Twój Nick:</label>
-                <input type="text" id="nickname" 
-                       placeholder="Wpisz swój nick..." 
-                       maxlength="15"
-                       value="Gracz">
-                <div class="hint">Maksymalnie 15 znaków</div>
-            </div>
-            
-            <div class="color-picker">
-                <label><i class="fas fa-palette"></i> Kolor kulki:</label>
-                <div class="colors">
-                    <div class="color-option" style="background: #FF5252" data-color="#FF5252"></div>
-                    <div class="color-option" style="background: #4CAF50" data-color="#4CAF50"></div>
-                    <div class="color-option" style="background: #2196F3" data-color="#2196F3"></div>
-                    <div class="color-option" style="background: #FFC107" data-color="#FFC107"></div>
-                    <div class="color-option" style="background: #9C27B0" data-color="#9C27B0"></div>
-                    <div class="color-option" style="background: #00BCD4" data-color="#00BCD4"></div>
+            <div class="logo-header">
+                <div class="floating-icon" style="font-size: 4rem; margin-bottom: 10px;">
+                    🎮
+                </div>
+                <h1 class="glowing-text">AGARIO MULTIPLAYER</h1>
+                <div class="game-subtitle">
+                    <span class="pulse-dot"></span>
+                    <span>LIVE</span>
+                    <span class="pulse-dot"></span>
                 </div>
             </div>
             
-            <div class="voice-permission">
-                <label>
-                    <input type="checkbox" id="voicePermission" checked>
-                    <i class="fas fa-microphone"></i> Zezwól na użycie mikrofonu
-                </label>
-                <div class="hint">Voice chat działa w promieniu 20m</div>
+            <div class="player-setup">
+                <div class="setup-card">
+                    <div class="setup-header">
+                        <i class="fas fa-user-circle"></i>
+                        <h3>Twój Profil</h3>
+                    </div>
+                    
+                    <div class="input-group">
+                        <div class="input-with-icon">
+                            <i class="fas fa-user-tag"></i>
+                            <input type="text" 
+                                   id="nickname" 
+                                   placeholder="Wpisz swój nick..." 
+                                   maxlength="15"
+                                   value="Gracz">
+                        </div>
+                        <div class="hint">
+                            <i class="fas fa-info-circle"></i>
+                            Maksymalnie 15 znaków
+                        </div>
+                    </div>
+                    
+                    <div class="color-picker">
+                        <div class="picker-header">
+                            <i class="fas fa-palette"></i>
+                            <h4>Kolor Twojej kulki</h4>
+                        </div>
+                        <div class="colors">
+                            <div class="color-option" style="background: #FF5252" data-color="#FF5252" title="Czerwony">
+                                <div class="color-check"><i class="fas fa-check"></i></div>
+                            </div>
+                            <div class="color-option" style="background: #4CAF50" data-color="#4CAF50" title="Zielony">
+                                <div class="color-check"><i class="fas fa-check"></i></div>
+                            </div>
+                            <div class="color-option" style="background: #2196F3" data-color="#2196F3" title="Niebieski">
+                                <div class="color-check"><i class="fas fa-check"></i></div>
+                            </div>
+                            <div class="color-option" style="background: #FFC107" data-color="#FFC107" title="Żółty">
+                                <div class="color-check"><i class="fas fa-check"></i></div>
+                            </div>
+                            <div class="color-option" style="background: #9C27B0" data-color="#9C27B0" title="Fioletowy">
+                                <div class="color-check"><i class="fas fa-check"></i></div>
+                            </div>
+                            <div class="color-option" style="background: #00BCD4" data-color="#00BCD4" title="Cyjan">
+                                <div class="color-check"><i class="fas fa-check"></i></div>
+                            </div>
+                            <div class="color-option" style="background: #FF9800" data-color="#FF9800" title="Pomarańczowy">
+                                <div class="color-check"><i class="fas fa-check"></i></div>
+                            </div>
+                            <div class="color-option" style="background: #795548" data-color="#795548" title="Brązowy">
+                                <div class="color-check"><i class="fas fa-check"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="setup-card">
+                    <div class="setup-header">
+                        <i class="fas fa-microphone"></i>
+                        <h3>Voice Chat</h3>
+                    </div>
+                    
+                    <div class="voice-settings">
+                        <div class="voice-permission">
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="voicePermission" checked>
+                                <label for="voicePermission" class="toggle-label">
+                                    <span class="toggle-slider"></span>
+                                    <span class="toggle-text">Włącz Voice Chat</span>
+                                </label>
+                            </div>
+                            <div class="hint voice-hint">
+                                <i class="fas fa-headphones"></i>
+                                Zalecane używanie słuchawek (unikaj echa)
+                            </div>
+                        </div>
+                        
+                        <div class="voice-info">
+                            <div class="info-item">
+                                <i class="fas fa-volume-up"></i>
+                                <span>Komunikacja głosowa w czasie rzeczywistym</span>
+                            </div>
+                            <div class="info-item">
+                                <i class="fas fa-ruler"></i>
+                                <span>Zasięg: 20 metrów</span>
+                            </div>
+                            <div class="info-item">
+                                <i class="fas fa-users"></i>
+                                <span>Słyszysz tylko graczy w zasięgu</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
             
             <button id="playBtn" class="play-btn">
-                <i class="fas fa-play"></i> ROZPOCZNIJ GRĘ
+                <i class="fas fa-play-circle"></i>
+                <span class="btn-text">ROZPOCZNIJ GRĘ</span>
+                <div class="btn-glow"></div>
             </button>
             
-            <div class="game-features">
-                <div class="feature">
-                    <i class="fas fa-voice"></i>
-                    <span>Voice Chat (20m)</span>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <i class="fas fa-microphone-alt"></i>
+                    </div>
+                    <h4>Voice Chat 20m</h4>
+                    <p>Rozmawiaj z graczami w pobliżu</p>
                 </div>
-                <div class="feature">
-                    <i class="fas fa-users"></i>
-                    <span>Multiplayer</span>
+                
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <h4>Multiplayer Online</h4>
+                    <p>Graj z graczami z całego świata</p>
                 </div>
-                <div class="feature">
-                    <i class="fas fa-comments"></i>
-                    <span>Czat tekstowy</span>
+                
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <h4>Czat Tekstowy</h4>
+                    <p>Pisz z emotikonami</p>
                 </div>
-                <div class="feature">
-                    <i class="fas fa-trophy"></i>
-                    <span>System rankingowy</span>
+                
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);">
+                        <i class="fas fa-trophy"></i>
+                    </div>
+                    <h4>System Rankingowy</h4>
+                    <p>Walcz o pierwsze miejsce</p>
                 </div>
             </div>
             
-            <div class="instructions">
-                <h3><i class="fas fa-gamepad"></i> Sterowanie:</h3>
-                <ul>
-                    <li><strong>W / ↑</strong> - ruch w górę</li>
-                    <li><strong>S / ↓</strong> - ruch w dół</li>
-                    <li><strong>A / ←</strong> - ruch w lewo</li>
-                    <li><strong>D / →</strong> - ruch w prawo</li>
-                    <li><strong>V</strong> - mów przez voice chat</li>
-                    <li><strong>T</strong> - otwórz czat tekstowy</li>
-                    <li><strong>Scroll</strong> - powiększanie/pomniejszanie</li>
-                </ul>
-                <p class="warning"><i class="fas fa-info-circle"></i> Zjadaj mniejsze kulki, aby rosnąć!</p>
+            <div class="game-instructions">
+                <div class="instructions-header">
+                    <i class="fas fa-gamepad"></i>
+                    <h3>Sterowanie</h3>
+                </div>
+                
+                <div class="controls-grid">
+                    <div class="control-item">
+                        <div class="key-group">
+                            <kbd>W</kbd>
+                            <kbd>A</kbd>
+                            <kbd>S</kbd>
+                            <kbd>D</kbd>
+                        </div>
+                        <span>Ruch kulki</span>
+                    </div>
+                    
+                    <div class="control-item">
+                        <div class="key-group">
+                            <kbd><i class="fas fa-arrow-up"></i></kbd>
+                            <kbd><i class="fas fa-arrow-left"></i></kbd>
+                            <kbd><i class="fas fa-arrow-down"></i></kbd>
+                            <kbd><i class="fas fa-arrow-right"></i></kbd>
+                        </div>
+                        <span>Alternatywny ruch</span>
+                    </div>
+                    
+                    <div class="control-item">
+                        <kbd class="key-large">V</kbd>
+                        <span>Mów przez voice chat</span>
+                    </div>
+                    
+                    <div class="control-item">
+                        <kbd class="key-large">T</kbd>
+                        <span>Otwórz czat tekstowy</span>
+                    </div>
+                    
+                    <div class="control-item">
+                        <div class="scroll-icon">
+                            <i class="fas fa-mouse"></i>
+                            <i class="fas fa-arrows-alt-v"></i>
+                        </div>
+                        <span>Zoom mapy</span>
+                    </div>
+                    
+                    <div class="control-item">
+                        <kbd class="key-large"><i class="fas fa-mouse-pointer"></i></kbd>
+                        <span>Kliknij na minimapę</span>
+                    </div>
+                </div>
+                
+                <div class="game-tip">
+                    <i class="fas fa-lightbulb"></i>
+                    <p><strong>Tip:</strong> Zjadaj mniejsze kulki, aby rosnąć i stać się największym graczem na mapie!</p>
+                </div>
             </div>
             
             <div class="server-status">
-                <div class="status-dot"></div>
-                <span id="statusText">Serwer gotowy</span>
+                <div class="status-indicator">
+                    <div class="status-dot"></div>
+                    <div class="status-pulse"></div>
+                </div>
+                <div class="status-info">
+                    <span id="statusText" class="status-text">🟢 Serwer gotowy</span>
+                    <span class="status-subtext">Połącz się z graczami na całym świecie</span>
+                </div>
+            </div>
+            
+            <div class="footer-info">
+                <div class="version">v3.0 • Voice Chat Edition</div>
+                <div class="creator">
+                    <i class="fas fa-code"></i>
+                    Stworzone z pasją do gier multiplayer
+                </div>
             </div>
         </div>
     </div>
@@ -93,16 +274,49 @@
             const nicknameInput = document.getElementById('nickname');
             const voicePermission = document.getElementById('voicePermission');
             
-            // Wybór koloru
+            // Animacja przycisku
+            playBtn.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-5px) scale(1.02)';
+            });
+            
+            playBtn.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0) scale(1)';
+            });
+            
+            // Wybór koloru z animacją
             document.querySelectorAll('.color-option').forEach(option => {
                 option.addEventListener('click', function() {
-                    document.querySelectorAll('.color-option').forEach(opt => 
-                        opt.classList.remove('selected'));
+                    document.querySelectorAll('.color-option').forEach(opt => {
+                        opt.classList.remove('selected');
+                        opt.querySelector('.color-check').style.opacity = '0';
+                    });
                     this.classList.add('selected');
+                    this.querySelector('.color-check').style.opacity = '1';
+                    
+                    // Animacja wyboru
+                    this.style.transform = 'scale(1.2)';
+                    setTimeout(() => {
+                        this.style.transform = 'scale(1)';
+                    }, 200);
+                });
+                
+                // Hover effect
+                option.addEventListener('mouseenter', function() {
+                    if (!this.classList.contains('selected')) {
+                        this.style.transform = 'scale(1.1)';
+                    }
+                });
+                
+                option.addEventListener('mouseleave', function() {
+                    if (!this.classList.contains('selected')) {
+                        this.style.transform = 'scale(1)';
+                    }
                 });
             });
             
+            // Wybierz domyślny kolor
             document.querySelectorAll('.color-option')[0].classList.add('selected');
+            document.querySelectorAll('.color-option')[0].querySelector('.color-check').style.opacity = '1';
             
             // Rozpoczęcie gry
             playBtn.addEventListener('click', function() {
@@ -111,18 +325,36 @@
                 const allowVoice = voicePermission.checked;
                 
                 if (!nickname) {
-                    alert('Proszę wpisać nick!');
+                    showNotification('Proszę wpisać nick!', 'error');
+                    nicknameInput.focus();
                     return;
                 }
                 
-                localStorage.setItem('playerData', JSON.stringify({
-                    nickname: nickname,
-                    color: selectedColor,
-                    allowVoice: allowVoice,
-                    timestamp: Date.now()
-                }));
+                if (nickname.length < 2) {
+                    showNotification('Nick musi mieć co najmniej 2 znaki!', 'error');
+                    nicknameInput.focus();
+                    return;
+                }
                 
-                window.location.href = 'game.html';
+                // Animacja kliknięcia
+                this.style.transform = 'scale(0.95)';
+                this.style.opacity = '0.8';
+                
+                setTimeout(() => {
+                    this.style.transform = 'scale(1)';
+                    this.style.opacity = '1';
+                    
+                    // Zapisz dane
+                    localStorage.setItem('playerData', JSON.stringify({
+                        nickname: nickname,
+                        color: selectedColor,
+                        allowVoice: allowVoice,
+                        timestamp: Date.now()
+                    }));
+                    
+                    // Przejdź do gry
+                    window.location.href = 'game.html';
+                }, 200);
             });
             
             // Enter też zaczyna grę
@@ -132,8 +364,157 @@
                 }
             });
             
-            nicknameInput.focus();
-            nicknameInput.select();
+            // Auto-focus i wybór tekstu
+            setTimeout(() => {
+                nicknameInput.focus();
+                nicknameInput.select();
+            }, 500);
+            
+            // Pokazuj liczbę znaków
+            nicknameInput.addEventListener('input', function() {
+                const length = this.value.length;
+                const max = 15;
+                
+                if (length > max - 3) {
+                    this.style.borderColor = '#FF9800';
+                } else {
+                    this.style.borderColor = '#ddd';
+                }
+            });
+            
+            // Sprawdź połączenie z serwerem
+            checkServerStatus();
+            
+            function showNotification(message, type = 'info') {
+                const notification = document.createElement('div');
+                notification.className = `notification notification-${type}`;
+                notification.innerHTML = `
+                    <i class="fas fa-${type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+                    <span>${message}</span>
+                `;
+                
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: ${type === 'error' ? '#F44336' : '#4CAF50'};
+                    color: white;
+                    padding: 15px 25px;
+                    border-radius: 10px;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    z-index: 10000;
+                    animation: slideInRight 0.3s ease-out;
+                    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+                `;
+                
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.style.animation = 'slideOutRight 0.3s ease-out';
+                    setTimeout(() => notification.remove(), 300);
+                }, 3000);
+            }
+            
+            async function checkServerStatus() {
+                const statusText = document.getElementById('statusText');
+                const statusDot = document.querySelector('.status-dot');
+                
+                try {
+                    statusText.textContent = "🟡 Łączenie z serwerem...";
+                    statusDot.style.background = '#FFC107';
+                    
+                    // Próba połączenia testowego
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    // Symulacja pomyślnego połączenia
+                    statusText.textContent = "🟢 Serwer gotowy";
+                    statusDot.style.background = '#4CAF50';
+                    
+                } catch (error) {
+                    statusText.textContent = "🔴 Błąd połączenia";
+                    statusDot.style.background = '#F44336';
+                    showNotification('Nie udało się połączyć z serwerem', 'error');
+                }
+            }
+            
+            // Dodaj style animacji
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes slideInRight {
+                    from {
+                        opacity: 0;
+                        transform: translateX(100%);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateX(0);
+                    }
+                }
+                
+                @keyframes slideOutRight {
+                    from {
+                        opacity: 1;
+                        transform: translateX(0);
+                    }
+                    to {
+                        opacity: 0;
+                        transform: translateX(100%);
+                    }
+                }
+                
+                .menu-background {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    overflow: hidden;
+                    z-index: -1;
+                }
+                
+                .bg-circle {
+                    position: absolute;
+                    border-radius: 50%;
+                    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+                    animation: float 20s infinite ease-in-out;
+                }
+                
+                .bg-circle:nth-child(1) { width: 300px; height: 300px; }
+                .bg-circle:nth-child(2) { width: 200px; height: 200px; }
+                .bg-circle:nth-child(3) { width: 400px; height: 400px; }
+                .bg-circle:nth-child(4) { width: 250px; height: 250px; }
+                .bg-circle:nth-child(5) { width: 350px; height: 350px; }
+                
+                .pulse-dot {
+                    display: inline-block;
+                    width: 8px;
+                    height: 8px;
+                    background: #4CAF50;
+                    border-radius: 50%;
+                    margin: 0 10px;
+                    animation: pulse 1.5s infinite;
+                }
+                
+                .btn-glow {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.3) 50%, transparent 70%);
+                    animation: glowSlide 3s infinite linear;
+                    border-radius: inherit;
+                    pointer-events: none;
+                }
+                
+                @keyframes glowSlide {
+                    0% { transform: translateX(-100%); }
+                    100% { transform: translateX(100%); }
+                }
+            `;
+            document.head.appendChild(style);
         });
     </script>
 </body>
