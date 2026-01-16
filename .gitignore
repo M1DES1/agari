@@ -1,0 +1,11 @@
+node_modules/
+*.log
+.DS_Store
+.env
+temp/
+uploads/
+*.jpg
+*.png
+*.gif
+*.mp3
+*.wav
