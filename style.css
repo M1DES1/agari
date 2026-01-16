@@ -2026,3 +2026,287 @@ kbd {
         width: 8px;
     }
 }
+/* DODAJ NA KONIEC PLIKU style.css */
+
+/* Styl dla minimapy */
+.minimap-container {
+    position: absolute;
+    top: 90px;
+    left: 20px;
+    z-index: 99;
+}
+
+.minimap {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 10px;
+    padding: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    border: 2px solid #333;
+}
+
+#minimap {
+    border-radius: 5px;
+    display: block;
+}
+
+/* Dodatkowe animacje */
+@keyframes virusGlow {
+    0%, 100% { 
+        filter: drop-shadow(0 0 5px #00FF00);
+        transform: scale(1);
+    }
+    50% { 
+        filter: drop-shadow(0 0 15px #00FF00);
+        transform: scale(1.05);
+    }
+}
+
+@keyframes bulletGlow {
+    0%, 100% { 
+        filter: drop-shadow(0 0 3px #2196F3);
+    }
+    50% { 
+        filter: drop-shadow(0 0 10px #2196F3);
+    }
+}
+
+@keyframes foodFloat {
+    0%, 100% { 
+        transform: translateY(0);
+    }
+    50% { 
+        transform: translateY(-3px);
+    }
+}
+
+/* Styl dla wirusów */
+.virus {
+    animation: virusGlow 2s infinite;
+}
+
+/* Styl dla pocisków */
+.bullet {
+    animation: bulletGlow 1s infinite;
+}
+
+/* Styl dla jedzenia */
+.food {
+    animation: foodFloat 3s infinite ease-in-out;
+}
+
+/* Styl dla celownika */
+.crosshair {
+    position: absolute;
+    pointer-events: none;
+    z-index: 1000;
+}
+
+/* Styl dla podpowiedzi sterowania */
+.controls-tip {
+    position: absolute;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 98;
+}
+
+/* Styl dla wskaźnika cooldown */
+.cooldown-indicator {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: conic-gradient(#4CAF50 0%, #FF9800 0%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 0.8rem;
+}
+
+/* Styl dla powiadomień w grze */
+.game-notification {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 20px 30px;
+    border-radius: 15px;
+    text-align: center;
+    z-index: 9999;
+    animation: fadeInOut 3s ease-in-out;
+    border: 2px solid #4CAF50;
+}
+
+@keyframes fadeInOut {
+    0%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+    15%, 85% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* Styl dla statystyk w HUD */
+.hud .stat {
+    min-width: 120px;
+}
+
+/* Styl dla trybu strzelania */
+.shooting-mode {
+    border: 3px solid red !important;
+    box-shadow: 0 0 20px red !important;
+}
+
+/* Responsywność dla minimapy */
+@media (max-width: 768px) {
+    .minimap-container {
+        top: auto;
+        bottom: 120px;
+        left: 10px;
+    }
+    
+    .minimap {
+        transform: scale(0.8);
+        transform-origin: bottom left;
+    }
+    
+    .controls-hint {
+        bottom: 10px;
+        font-size: 0.8rem;
+        padding: 8px 15px;
+    }
+}
+
+/* Styl dla trybu pełnoekranowego */
+:fullscreen .game-container {
+    width: 100vw;
+    height: 100vh;
+}
+
+/* Styl dla efektów wizualnych */
+.particle {
+    position: absolute;
+    pointer-events: none;
+    z-index: 999;
+}
+
+/* Styl dla efektu zjedzenia */
+.eat-effect {
+    animation: eatPulse 0.5s ease-out;
+}
+
+@keyframes eatPulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.2); opacity: 0.7; }
+    100% { transform: scale(1); opacity: 0; }
+}
+
+/* Styl dla paska postępu cooldown */
+.cooldown-bar {
+    width: 100px;
+    height: 10px;
+    background: #333;
+    border-radius: 5px;
+    overflow: hidden;
+    margin: 5px auto;
+}
+
+.cooldown-progress {
+    height: 100%;
+    background: linear-gradient(90deg, #4CAF50, #FF9800);
+    width: 0%;
+    transition: width 1s linear;
+}
+
+/* Styl dla podpowiedzi klawiszy */
+.key-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 0.8rem;
+    margin: 0 5px;
+}
+
+.key-hint kbd {
+    background: #333;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: monospace;
+}
+
+/* Styl dla komunikatu systemowego w grze */
+.game-alert {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
+    color: white;
+    padding: 15px 30px;
+    border-radius: 10px;
+    z-index: 9999;
+    animation: slideDown 0.3s ease-out;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+    text-align: center;
+    min-width: 300px;
+    max-width: 80%;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+/* Styl dla liczby graczy w minimapie */
+.player-count {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+/* Styl dla trybu debug */
+.debug-info {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    background: rgba(0, 0, 0, 0.8);
+    color: #00FF00;
+    padding: 10px;
+    border-radius: 5px;
+    font-family: monospace;
+    font-size: 0.8rem;
+    z-index: 9999;
+    display: none;
+}
+
+.debug-info.active {
+    display: block;
+}
