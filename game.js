@@ -36,7 +36,6 @@ let voiceConnections = new Set();
 let voiceSequence = 0;
 let isVoiceReady = false;
 let isUsingHeadphones = false;
-let feedbackDetectionInterval = null;
 
 let chatPanel, chatMessages, chatInput, chatSend, chatToggle, chatClose, unreadBadge;
 let voiceToggle, voiceStatus, voiceIndicator, voiceUsersList;
@@ -88,7 +87,6 @@ function initDOM() {
     setTimeout(async () => {
         console.log("🔄 Automatyczne uruchamianie voice chatu w grze...");
         
-        // Pokazuj komunikat o ładowaniu voice
         updateVoiceStatus('initializing');
         
         try {
@@ -125,7 +123,6 @@ function initDOM() {
                 timestamp: Date.now()
             });
             
-            // Dodaj przycisk do ręcznego włączenia
             if (voiceStatus) {
                 voiceStatus.innerHTML = '<span style="color:#2196F3; cursor:pointer; text-decoration:underline">Kliknij, by włączyć mikrofon</span>';
                 voiceStatus.style.cursor = 'pointer';
@@ -135,13 +132,12 @@ function initDOM() {
                 };
             }
         }
-    }, 1500); // Opóźnienie 1.5 sekundy po załadowaniu gry
+    }, 1500);
 }
 
 async function initVoiceChat() {
     try {
         console.log("🔊 Inicjalizacja voice chatu w GRZE...");
-        console.log("🔊 Player pozwolił na voice:", playerData.allowVoice);
         
         if (!playerData.allowVoice) {
             updateVoiceStatus('disabled');
@@ -169,7 +165,6 @@ async function initVoiceChat() {
         
         console.log('🎤 Prośba o dostęp do mikrofonu w GRZE...');
         
-        // JAWNA PROŚBA O DOSTĘP DLA STRONY GRY
         voiceStream = await navigator.mediaDevices.getUserMedia({
             audio: {
                 echoCancellation: { ideal: true },
@@ -185,14 +180,12 @@ async function initVoiceChat() {
         
         console.log('✅ Dostęp do mikrofonu w GRZE przyznany!');
         
-        // Utwórz AudioContext
         try {
             audioContext = new (window.AudioContext || window.webkitAudioContext)({
                 sampleRate: 16000,
                 latencyHint: 'interactive'
             });
             
-            // Wznów AudioContext jeśli jest zawieszony
             if (audioContext.state === 'suspended') {
                 await audioContext.resume();
                 console.log('✅ AudioContext wznowiony');
@@ -201,10 +194,8 @@ async function initVoiceChat() {
             console.log('✅ AudioContext utworzony dla odtwarzania');
         } catch (err) {
             console.warn('⚠️ Nie udało się utworzyć AudioContext:', err);
-            // Kontynuuj bez AudioContext
         }
         
-        // Pobierz ustawienia słuchawek
         const headphonesConfirmed = localStorage.getItem('headphonesConfirmed');
         if (headphonesConfirmed !== null) {
             isUsingHeadphones = headphonesConfirmed === 'true';
@@ -253,7 +244,6 @@ async function initVoiceChat() {
             });
         }
         
-        // Dodaj przycisk do ponownej próby
         if (voiceStatus) {
             voiceStatus.innerHTML = '<span style="color:#2196F3; cursor:pointer; text-decoration:underline">Kliknij, by ponowić próbę</span>';
             voiceStatus.style.cursor = 'pointer';
@@ -324,7 +314,6 @@ function startVoiceChat() {
     try {
         console.log('🎤 Rozpoczynanie voice chat w grze...');
         
-        // Sprawdź dostępne formaty
         const mimeTypes = [
             'audio/webm;codecs=opus',
             'audio/webm',
@@ -352,7 +341,6 @@ function startVoiceChat() {
             audioBitsPerSecond: 128000
         };
         
-        // Utwórz MediaRecorder
         mediaRecorder = new MediaRecorder(voiceStream, options);
         
         let audioChunks = [];
@@ -361,7 +349,6 @@ function startVoiceChat() {
             if (event.data && event.data.size > 0) {
                 audioChunks.push(event.data);
                 
-                // Gdy skończy się nagrywanie, wyślij dane
                 if (mediaRecorder.state === 'inactive') {
                     sendAudioChunks(audioChunks);
                     audioChunks = [];
@@ -382,8 +369,7 @@ function startVoiceChat() {
             console.log('🎤 Nagrywanie zatrzymane');
         };
         
-        // Zacznij nagrywanie
-        mediaRecorder.start(250); // Zbieraj dane co 250ms
+        mediaRecorder.start(250);
         
         isVoiceActive = true;
         
@@ -419,7 +405,6 @@ async function sendAudioChunks(chunks) {
             return;
         }
         
-        // Połącz chunki w jeden blob
         const blob = new Blob(chunks, { type: 'audio/webm' });
         
         if (blob.size < 100) {
@@ -427,12 +412,10 @@ async function sendAudioChunks(chunks) {
             return;
         }
         
-        // Konwertuj blob na base64
         const base64Audio = await blobToBase64(blob);
         
         console.log(`📤 Wysyłanie audio: ${base64Audio.length} bajtów, seq: ${voiceSequence}`);
         
-        // Wyślij dane
         ws.send(JSON.stringify({
             type: 'voiceAudio',
             audio: base64Audio,
@@ -485,14 +468,21 @@ function sendVoiceStatus(status) {
 
 function playVoiceAudio(fromPlayerId, audioData, volume = 1.0) {
     try {
-        console.log(`🔊 Odtwarzanie audio od ${fromPlayerId}, głośność: ${volume}, rozmiar danych: ${audioData?.length || 0}`);
+        console.log(`🔊 Odtwarzanie audio od ${fromPlayerId}, głośność: ${volume}`);
+        
+        // SPRAWDŹ UPRAWNIENIE DŹWIĘKU
+        const audioPermission = localStorage.getItem('audioPermission');
+        if (audioPermission === 'skipped') {
+            console.log('🔇 Pomijanie audio - użytkownik nie zezwolił na dźwięk');
+            showAudioPermissionWarning();
+            return;
+        }
         
         if (!audioData || audioData.length < 10) {
             console.warn('⚠️ Dane audio zbyt małe lub puste');
             return;
         }
         
-        // Utwórz AudioContext jeśli nie istnieje
         if (!audioContext || audioContext.state === 'closed') {
             try {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)({
@@ -502,6 +492,7 @@ function playVoiceAudio(fromPlayerId, audioData, volume = 1.0) {
                 console.log('✅ AudioContext utworzony w playVoiceAudio');
             } catch (err) {
                 console.error('❌ Błąd tworzenia AudioContext:', err);
+                showAudioPermissionWarning();
                 return;
             }
         }
@@ -511,10 +502,10 @@ function playVoiceAudio(fromPlayerId, audioData, volume = 1.0) {
                 console.log('✅ AudioContext wznowiony');
             }).catch(err => {
                 console.error('❌ Błąd wznawiania AudioContext:', err);
+                showAudioPermissionWarning();
             });
         }
         
-        // Konwertuj base64 na ArrayBuffer
         try {
             const binaryString = atob(audioData);
             const bytes = new Uint8Array(binaryString.length);
@@ -522,21 +513,17 @@ function playVoiceAudio(fromPlayerId, audioData, volume = 1.0) {
                 bytes[i] = binaryString.charCodeAt(i);
             }
             
-            // Utwórz blob
             const blob = new Blob([bytes], { type: 'audio/webm' });
             const audioUrl = URL.createObjectURL(blob);
             
-            // Utwórz element audio
             const audioElement = new Audio();
             audioElement.autoplay = true;
             
-            // Dostosuj głośność (ogranicz do 50% dla komfortu)
             const adjustedVolume = Math.max(0.05, Math.min(0.5, volume * 0.5));
             audioElement.volume = adjustedVolume;
             
             audioElement.src = audioUrl;
             
-            // Pokaż aktywność voice
             showVoiceActivity(fromPlayerId, true);
             
             audioElement.onplay = () => {
@@ -553,12 +540,16 @@ function playVoiceAudio(fromPlayerId, audioData, volume = 1.0) {
                 console.error('❌ Błąd odtwarzania audio:', error);
                 showVoiceActivity(fromPlayerId, false);
                 URL.revokeObjectURL(audioUrl);
+                
+                if (error.message.includes('play') || error.message.includes('autoplay')) {
+                    showAudioPermissionWarning();
+                }
             };
             
-            // Spróbuj odtworzyć
             audioElement.play().catch(err => {
                 console.error('❌ Błąd odtwarzania elementu audio:', err);
                 showVoiceActivity(fromPlayerId, false);
+                showAudioPermissionWarning();
             });
             
         } catch (error) {
@@ -570,6 +561,101 @@ function playVoiceAudio(fromPlayerId, audioData, volume = 1.0) {
         console.error('❌ Błąd w playVoiceAudio:', error);
         showVoiceActivity(fromPlayerId, false);
     }
+}
+
+function showAudioPermissionWarning() {
+    const lastWarning = localStorage.getItem('lastAudioWarning');
+    const today = new Date().toDateString();
+    
+    if (lastWarning === today) {
+        return;
+    }
+    
+    if (document.getElementById('audioWarning')) return;
+    
+    const warning = document.createElement('div');
+    warning.id = 'audioWarning';
+    warning.style.cssText = `
+        position: fixed;
+        bottom: 100px;
+        right: 20px;
+        background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 25px;
+        max-width: 400px;
+        z-index: 9999;
+        animation: slideInUp 0.5s ease-out;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+        border-left: 5px solid #FF5722;
+        font-family: Arial, sans-serif;
+    `;
+    
+    warning.innerHTML = `
+        <div style="display: flex; align-items: flex-start; gap: 20px; margin-bottom: 20px;">
+            <div style="font-size: 3rem; flex-shrink: 0;">🔊</div>
+            <div>
+                <h4 style="margin: 0; font-size: 1.4rem; color: #fff; margin-bottom: 10px;">Dźwięk jest wyłączony!</h4>
+                <p style="margin: 0; font-size: 1.1rem; color: #ffe0b2; line-height: 1.5;">
+                    Nie słyszysz innych graczy. Zezwól na odtwarzanie dźwięku.
+                </p>
+            </div>
+        </div>
+        <div style="display: flex; gap: 15px;">
+            <button id="closeAudioWarning" style="
+                flex: 1;
+                background: rgba(255, 255, 255, 0.2);
+                color: white;
+                border: 2px solid rgba(255, 255, 255, 0.3);
+                padding: 15px;
+                border-radius: 10px;
+                cursor: pointer;
+                font-size: 1.1rem;
+                transition: all 0.3s;
+                font-weight: bold;
+            ">
+                Zamknij
+            </button>
+            <button id="enableAudioBtn" style="
+                flex: 1;
+                background: white;
+                color: #FF9800;
+                border: none;
+                padding: 15px;
+                border-radius: 10px;
+                cursor: pointer;
+                font-weight: bold;
+                font-size: 1.1rem;
+                transition: all 0.3s;
+                box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            ">
+                🔊 Włącz dźwięk
+            </button>
+        </div>
+    `;
+    
+    document.body.appendChild(warning);
+    
+    document.getElementById('closeAudioWarning').addEventListener('click', () => {
+        warning.style.animation = 'slideOutDown 0.5s ease-out';
+        setTimeout(() => warning.remove(), 500);
+        localStorage.setItem('lastAudioWarning', today);
+    });
+    
+    document.getElementById('enableAudioBtn').addEventListener('click', () => {
+        warning.remove();
+        const audioPermissionModal = document.getElementById('audioPermissionModal');
+        if (audioPermissionModal) {
+            audioPermissionModal.style.display = 'flex';
+        }
+    });
+    
+    setTimeout(() => {
+        if (document.body.contains(warning)) {
+            warning.style.animation = 'slideOutDown 0.5s ease-out';
+            setTimeout(() => warning.remove(), 500);
+        }
+    }, 10000);
 }
 
 function showVoiceActivity(playerId, isSpeaking) {
@@ -1131,7 +1217,6 @@ function drawMinimap(me) {
     
     ctx.save();
     
-    // Tło z cieniem
     ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
     ctx.shadowBlur = 20;
     ctx.shadowOffsetX = 5;
@@ -1145,12 +1230,10 @@ function drawMinimap(me) {
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 0;
     
-    // Obramowanie
     ctx.strokeStyle = '#333';
     ctx.lineWidth = 4;
     ctx.strokeRect(canvas.width - minimapSize - margin, margin, minimapSize, minimapSize);
     
-    // Zasięg voice chatu na minimapie
     ctx.fillStyle = 'rgba(33, 150, 243, 0.1)';
     ctx.beginPath();
     ctx.arc(
@@ -1162,7 +1245,6 @@ function drawMinimap(me) {
     );
     ctx.fill();
     
-    // Gracze
     players.forEach(p => {
         const x = canvas.width - minimapSize - margin + p.x * scale;
         const y = margin + p.y * scale;
@@ -1187,7 +1269,6 @@ function drawMinimap(me) {
         }
     });
     
-    // Info box
     ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
     ctx.fillRect(canvas.width - minimapSize - margin, margin + minimapSize + 5, minimapSize, 30);
     
@@ -1207,7 +1288,6 @@ function drawMinimap(me) {
 function drawVoiceRange(me) {
     ctx.save();
     
-    // Zasięg voice chatu
     ctx.globalAlpha = 0.15;
     ctx.beginPath();
     ctx.arc(canvas.width/2, canvas.height/2, voiceRange * zoom, 0, Math.PI * 2);
@@ -1221,7 +1301,6 @@ function drawVoiceRange(me) {
     
     ctx.restore();
     
-    // Info box
     ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
     ctx.fillRect(25, canvas.height - 60, 180, 40);
     
@@ -1289,7 +1368,6 @@ window.addEventListener('beforeunload', () => {
         voiceStream.getTracks().forEach(track => track.stop());
     }
     
-    // Wyczyść wszystkie audio URL
     audioElements.forEach(audio => {
         if (audio.src && audio.src.startsWith('blob:')) {
             URL.revokeObjectURL(audio.src);
@@ -1297,7 +1375,6 @@ window.addEventListener('beforeunload', () => {
     });
 });
 
-// Ping serwera co 20 sekund
 setInterval(() => {
     if (ws.readyState === WebSocket.OPEN && myId) {
         ws.send(JSON.stringify({
@@ -1306,7 +1383,6 @@ setInterval(() => {
     }
 }, 20000);
 
-// Dodaj automatyczne wznawianie AudioContext po interakcji użytkownika
 document.addEventListener('click', async () => {
     if (audioContext && audioContext.state === 'suspended') {
         try {
@@ -1318,7 +1394,6 @@ document.addEventListener('click', async () => {
     }
 });
 
-// Dodaj debugowanie voice chatu
 function testVoiceChat() {
     console.log('🔊 Voice Chat Debug Info:');
     console.log('- Voice stream:', voiceStream ? '✓' : '✗');
@@ -1330,7 +1405,6 @@ function testVoiceChat() {
     console.log('- Players in range:', players.filter(p => p.id !== myId).length);
 }
 
-// Dodaj klawisz debugowania (F12)
 window.addEventListener('keydown', e => {
     if (e.key === 'F12') {
         e.preventDefault();
@@ -1338,7 +1412,6 @@ window.addEventListener('keydown', e => {
     }
 });
 
-// Dodaj style CSS
 const style = document.createElement('style');
 style.textContent = `
     @keyframes fadeIn {
